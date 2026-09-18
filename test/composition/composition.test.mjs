@@ -84,8 +84,11 @@ test('real Loader coerces all three mop Config schemas into apply(config)', asyn
     )
     assert.ok(exec, 'dsh-miopiik-executor entry must be mounted and active')
     assert.equal(exec.fiber.config.maxOutputChars, 4000)
-    assert.equal(exec.fiber.config.provider, 'deepseek-official')
-    assert.equal(exec.fiber.config.model, 'deepseek-v4-flash')
+    assert.equal(exec.fiber.config.strict, false)
+    // Zero-default model contract (0.1.7+): provider/model are deliberately
+    // absent from Config. The caller must pass both explicitly per execution.
+    assert.equal(exec.fiber.config.provider, undefined)
+    assert.equal(exec.fiber.config.model, undefined)
 
     const kw = entries.find(
       (entry) => entry.options.id === 'dsh-miopiik-magic-keywords',
@@ -151,10 +154,8 @@ test('MiOpIIk 层挂载 smoke：0.2 domains + planner/supervisor delegation 经�
     const entries = [...ctx4.loader.entries()]
     for (const id of [
       'dsh-miopiik-tool-recovery',
-      'dsh-miopiik-magic-keywords',
       'dsh-miopiik-diagnostics',
       'dsh-miopiik-executor',
-      'dsh-miopiik-learn',
       'dsh-miopiik-model-auth',
       'tool-subagent-planner',
       'tool-subagent-supervisor',

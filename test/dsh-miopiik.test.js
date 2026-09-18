@@ -9,10 +9,8 @@ const META = join(ROOT, 'packages', 'dsh-miopiik')
 const RUNTIME_SUITE = [
   'dsh-miopiik-tool-recovery',
   'dsh-miopiik-executor',
-  'dsh-miopiik-magic-keywords',
   'dsh-miopiik-model-auth',
   'dsh-miopiik-diagnostics',
-  'dsh-miopiik-learn',
   'dsh-miopiik-recall',
 ]
 
@@ -23,6 +21,8 @@ const PACKAGE_DEPS = [
   'dsh-miopiik-checkpoint',
   'dsh-miopiik-capabilities',
   'dsh-miopiik-run-stats',
+  'dsh-miopiik-magic-keywords',
+  'dsh-miopiik-learn',
 ]
 
 function walk(dir) {
@@ -35,7 +35,7 @@ function walk(dir) {
   return out
 }
 
-test('meta patch inserts exactly the seven 0.2 runtime rows', () => {
+test('meta patch inserts exactly the five 0.2 default runtime rows', () => {
   const yaml = readFileSync(join(META, 'cordis.patch.yml'), 'utf8')
   for (const name of RUNTIME_SUITE) {
     assert.match(
@@ -66,6 +66,8 @@ test('0.2 preset mounts converged domains, not compatibility rows', () => {
   assert.doesNotMatch(yaml, /- id: dsh-miopiik-checkpoint\b/)
   assert.doesNotMatch(yaml, /- id: dsh-miopiik-capabilities\b/)
   assert.doesNotMatch(yaml, /- id: dsh-miopiik-run-stats\b/)
+  assert.doesNotMatch(yaml, /- id: dsh-miopiik-magic-keywords\b/)
+  assert.doesNotMatch(yaml, /- id: dsh-miopiik-learn\b/)
 })
 
 test('bundled preset stays byte-identical to examples/miopiik', () => {

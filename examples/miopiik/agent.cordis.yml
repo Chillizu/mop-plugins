@@ -431,12 +431,6 @@
 - id: dsh-miopiik-tool-recovery
   name: 'dsh-miopiik-tool-recovery'
 
-# ── magic keywords ────────────────────────────────────────────────────────
-
-# MiOpIIk 魔法关键词（D15）：正文检测 ultrathink/workflowz → notice 注入。
-- id: dsh-miopiik-magic-keywords
-  name: 'dsh-miopiik-magic-keywords'
-
 # ── diagnostics ────────────────────────────────────────────────────────────
 
 # MiOpIIk 0.2 诊断域（D18/D27/D37）：seam 兼容探测 + token usage 可编程出口。
@@ -449,12 +443,6 @@
 # MiOpIIk 执行层（D25）：mop_spawn_executor 灵活派发（内嵌 persona + toolFilter + 可指定 model）。
 - id: dsh-miopiik-executor
   name: 'dsh-miopiik-executor'
-
-# ── learn ───────────────────────────────────────────────────────────────────
-
-# MiOpIIk learn（D12 落地）：mop_learn 把可复用流程铸成 skill（写 .dsh/skills/<name>/SKILL.md）。
-- id: dsh-miopiik-learn
-  name: 'dsh-miopiik-learn'
 
 # ── model auth ──────────────────────────────────────────────────────────────
 
