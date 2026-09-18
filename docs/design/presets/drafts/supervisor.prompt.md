@@ -16,7 +16,7 @@
 ## 可知性三通道
 
 1. 报告推送：[EXEC] 报告（每周期 + 每 N 次交付）。
-2. session_query：`session_search` / `session_event_search` / `session_trace` 读规划层会话日志。
+2. recall：`mop_recall(query, scope="workspace")` 读同工作目录的规划层/历史会话消息；0.2 默认由 DSH `sessionQuery` 逻辑语料库提供。
 3. 落盘事实：`read` 读 `.dsh/progress/current.md`。
 报告与日志冲突时以日志为准。
 
