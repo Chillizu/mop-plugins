@@ -56,7 +56,7 @@ graph TD
    不跳过、不自造参数、不改动包内文件。
 
 3. 安装后验证（只读，不额外改动）：
-   - 核对 9 个包已进入 profile（`dsh plugin list` 或 `dsh.profile.bundles`）；
+   - 核对默认运行时行已进入 profile（`dsh plugin list` 或 `dsh.profile.bundles`）；0.2 recovery 合并后独立 `dsh-miopiik-checkpoint` 不再是默认挂载行；
    - 重启后确认实际加载：Web UI 设置→插件清单出现 `dsh-miopiik-*`；装了 preset 则用
      `standingKeyFor('miopiik')` 验证挂载；
    - 可选 smoke：按 examples/miopiik/README.md 的「最小 smoke task」跑一遍
@@ -71,10 +71,10 @@ graph TD
 
 ## English Quickstart
 
-MiOpIIk is a single-responsibility plugin suite for the DeepSeek Harness: checkpoint/rewind recovery + event-driven auto checkpoints (`dsh-miopiik-tool-recovery`, `dsh-miopiik-checkpoint`), historical-session recall (`dsh-miopiik-recall`), controlled one-shot executor subagents with a zero-default model contract (`mop_spawn_executor`), a workspace-scoped model authorization gate, two-evidence-level seam probing, token telemetry, magic keywords, and a four-layer reviewer/planner/supervisor/executor workflow preset.
+MiOpIIk is a single-responsibility plugin suite for the DeepSeek Harness: checkpoint/rewind recovery + event-driven auto checkpoints (`dsh-miopiik-tool-recovery`; the old `dsh-miopiik-checkpoint` package is a 0.2 compatibility surface), historical-session recall (`dsh-miopiik-recall`), controlled one-shot executor subagents with a zero-default model contract (`mop_spawn_executor`), a workspace-scoped model authorization gate, two-evidence-level seam probing, token telemetry, magic keywords, and a four-layer reviewer/planner/supervisor/executor workflow preset.
 
 ```bash
-# 1) plugins — all seven with one command
+# 1) plugins — default runtime suite with one command
 dsh plugin --profile web add dsh-miopiik
 
 # 2) preset — the four-layer workflow (copies to ${DSH_HOME}/.agent-presets/miopiik)
@@ -104,7 +104,7 @@ DSH 兼容矩阵见 [`docs/design/dsh-compat.md`](docs/design/dsh-compat.md)。
 | 包                                                                   | 类型     | 工具 / 行为                                                                                                                                                                                                                                                                     |
 | -------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`dsh-miopiik`](packages/dsh-miopiik/)                               | **套件** | 一条命令装齐 9 插件（聚合 bundle patch）+ `npx dsh-miopiik` 初始化 miopiik preset                                                                                                                                                                                               |
-| [`dsh-miopiik-tool-recovery`](packages/dsh-miopiik-tool-recovery/)   | 恢复     | `mop_checkpoint`（记录目标会话 turn 边界 + git note）、`mop_rewind`（fork 到 checkpoint，含冷会话）、`mop_checkpoint_list`、`mop_checkpoint_prune`（按 `keep` 裁剪，dry-run 默认，`keep=0` 高风险）、`mop_rule_inject` / `mop_rule_show` / `mop_rule_clear`（会话级硬规则注入） |
+| [`dsh-miopiik-tool-recovery`](packages/dsh-miopiik-tool-recovery/)   | **核心恢复域** | 手动 `mop_checkpoint` + 事件驱动 `auto-turn` / `auto-error`、`mop_rewind`、`mop_checkpoint_list` / `prune`、会话级 rule inject/show/clear；0.2 起自动与手动 checkpoint 同域维护 |
 | [`dsh-miopiik-executor`](packages/dsh-miopiik-executor/)             | 执行     | `mop_spawn_executor`（一次性执行层子代理，**零默认零兜底**：model+provider 必须显式成对给出，省略/只给一边即抛错，无 Config 默认、不继承调用者；逐次指定 `timeoutMs` 硬超时）                                                                                                   |
 | [`dsh-miopiik-magic-keywords`](packages/dsh-miopiik-magic-keywords/) | hook     | 正文检测 `ultrathink` / `workflowz`（排除 code fence / inline code）→ `form: notice` 上下文消息注入（Config: `notices` dict）                                                                                                                                                   |
 | [`dsh-miopiik-model-auth`](packages/dsh-miopiik-model-auth/)         | 授权闸   | `mop_model_authorize` / `mop_model_revoke` / `mop_model_list` + `agent/request` 硬闸；**allowlist 工作区级**（`<workspace>/.dsh/memory/model-allowlist.md`，0.1.8+，跨工作区隔离；Config: `allowlistPath` 可显式覆盖）                                                          |
@@ -112,7 +112,7 @@ DSH 兼容矩阵见 [`docs/design/dsh-compat.md`](docs/design/dsh-compat.md)。
 | [`dsh-miopiik-learn`](packages/dsh-miopiik-learn/)                   | 学习     | `mop_learn`（把可复用流程铸成 `.dsh/skills/<name>/SKILL.md`，被 skill-filesystem 发现）、`mop_learn_list`（只读枚举已铸 skill 名称）                                                                                                                                            |
 | [`dsh-miopiik-run-stats`](packages/dsh-miopiik-run-stats/)           | 遥测     | `mop_run_stats`（D18 可编程 token 出口：读 session 累计四桶 uncached/cacheRead/cacheWrite/output，不计算价格/成本）                                                                                                                                                             |
 | [`dsh-miopiik-recall`](packages/dsh-miopiik-recall/)                 | 记忆     | `mop_recall`（会话/工作目录级历史消息检索：流式 zstd 解压扫描 `~/.dsh/sessions` 下本工作目录全部历史会话日志，命中行带时间/会话/角色；`scope=workspace` 默认 / `session` 只扫当前会话；大日志无上限）                                                                           |
-| [`dsh-miopiik-checkpoint`](packages/dsh-miopiik-checkpoint/)         | 记忆     | **里程碑自动检查点**（0.1.13）：根会话每轮关闭由 `agent/turn-stopping` 事件自动追加 `auto-turn` 行到 `.dsh/memory/checkpoints.md`，`agent/error` 记 `auto-error`；同 turn 去重，子代理轮次不写；`mop_checkpoint` 手动显式命名里程碑仍可用且互补                                 |
+| [`dsh-miopiik-checkpoint`](packages/dsh-miopiik-checkpoint/)         | **兼容** | 保留给 0.1.x 风格的独立安装；0.2 默认 preset 不再挂载，本行为已并入 `dsh-miopiik-tool-recovery`。迁移窗口内保持可安装，不 unpublish |
 
 ## 工具安全行为与限制
 
@@ -122,7 +122,7 @@ DSH 兼容矩阵见 [`docs/design/dsh-compat.md`](docs/design/dsh-compat.md)。
 - `mop_learn_list`：只读枚举 `.dsh/skills/` 下实际含 `SKILL.md` 的 skill 名称（排序），空/目录不存在返回 `(no skills)`。限制：不读内容、不读 frontmatter description、不写任何文件。
 - `mop_checkpoint_prune`：`keep` 必填（非负整数）；`confirm` 必须为布尔，仅严格 `true` 才写，缺省/false 一律 dry-run（返回将删数量与 label 清单）。只删 `parseCheckpointLine` 能识别的现行行，注释/空行/旧格式行/普通文本原位保留。`keep=0` 清空全部现行行，高风险、仍需 `confirm:true`。限制：旧格式行永不裁剪；不生成备份文件。
 - `mop_recall`：只读检索（zstd 子进程管道流式解压，命中即收、达上限即 kill），不写任何文件、不修改会话。限制：扫描的是 `~/.dsh/sessions` 下**已落盘**的日志快照（内存态实时内容不在其中）；大日志无大小上限，但极端大量命中受 `maxLines` 截断。
-- 自动检查点（`dsh-miopiik-checkpoint`）：只写 `<cwd>/.dsh/memory/checkpoints.md` 一个文件（轮关闭时 append 一行），不读会话内容、不触碰子代理；仅根会话（`delegationDepth=0`）生效，子代理轮次不写。落盘失败仅 warn、绝不阻断轮关闭。
+- 自动检查点（0.2 默认由 `dsh-miopiik-tool-recovery` 承担）：只写 `<cwd>/.dsh/memory/checkpoints.md`，仅根会话（`delegationDepth=0`）生效，子代理轮次不写；落盘失败仅 warn、绝不阻断轮关闭。`dsh-miopiik-checkpoint` 保留为迁移期兼容包。
 
 ## 安装
 
@@ -131,7 +131,7 @@ DSH 兼容矩阵见 [`docs/design/dsh-compat.md`](docs/design/dsh-compat.md)。
 ### 方式一（推荐）：套件包一条命令
 
 ```bash
-# 插件层：一条命令装入全部 9 个插件（自动并入 profile bundles）
+# 插件层：一条命令安装套件；0.2 默认运行时挂载 8 行，checkpoint 兼容包仍随依赖保留但不再单独挂载
 dsh plugin --profile web add dsh-miopiik
 
 # preset 层（完整四层工作流需要）：初始化 miopiik preset 到 ${DSH_HOME}/.agent-presets/miopiik
@@ -153,8 +153,10 @@ dsh plugin --profile web add \
   dsh-miopiik-capabilities \
   dsh-miopiik-learn \
   dsh-miopiik-run-stats \
-  dsh-miopiik-recall \
-  dsh-miopiik-checkpoint
+  dsh-miopiik-recall
+
+# 0.2: do not also add dsh-miopiik-checkpoint with tool-recovery.
+# The old package is compatibility-only; mounting both would duplicate auto-checkpoint events.
 ```
 
 需要完整四层工作流时再装 preset（脱敏模板在本仓库 `examples/miopiik/`）：
@@ -177,8 +179,7 @@ dsh plugin --profile web add \
   link:./packages/dsh-miopiik-capabilities \
   link:./packages/dsh-miopiik-learn \
   link:./packages/dsh-miopiik-run-stats \
-  link:./packages/dsh-miopiik-recall \
-  link:./packages/dsh-miopiik-checkpoint
+  link:./packages/dsh-miopiik-recall
 ```
 
 免发布/pnpm 的等价做法：把包目录放到任意位置（如 `~/.dsh/profiles/dsh-miopiik-*`），在 `~/.dsh/profiles/node_modules/` 下建同名 symlink（`ln -sfn ~/.dsh/profiles/dsh-miopiik-executor ~/.dsh/profiles/node_modules/dsh-miopiik-executor`），preset 行写裸包名 `dsh-miopiik-<feature>`——这样 Web UI 插件列表显示的是包名而非文件路径（`@deepseek-ai/dsh-*` 依赖同样靠 `~/.dsh/profiles/node_modules` 的 fallback 解析）。bundle 方式可被 `dsh plugin list/remove` 管理。
