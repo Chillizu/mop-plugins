@@ -1,6 +1,6 @@
 {
   "name": "dsh-miopiik-run-stats",
-  "description": "Programmatic token usage egress reading session cumulative usage buckets (uncached/cacheRead/cacheWrite/output). 会话累计 token 四桶可编程出口",
+  "description": "Compatibility package for MiOpIIk token run stats; implementation is owned by dsh-miopiik-diagnostics in 0.2. 兼容包：token 遥测实现已并入 diagnostics",
   "version": "0.1.13",
   "type": "module",
   "main": "index.js",
@@ -48,5 +48,8 @@
   "bugs": {
     "url": "https://github.com/Chillizu/mop-plugins/issues"
   },
-  "homepage": "https://github.com/Chillizu/mop-plugins/tree/main/packages/dsh-miopiik-run-stats#readme"
+  "homepage": "https://github.com/Chillizu/mop-plugins/tree/main/packages/dsh-miopiik-run-stats#readme",
+  "dependencies": {
+    "dsh-miopiik-diagnostics": "^0.1.13"
+  }
 }
