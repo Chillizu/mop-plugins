@@ -47,6 +47,7 @@
 | D34 | 监督层红队 benchmark（类型：实验提案；状态：设计已定，待跑，D29v3 fallback 阶梯末级）——对监督层直接喂对抗生成坏活，测能力级判别力，解耦执行层 base rate；与系统级 H2（D29v3）分开，单独预注册 | [d29v3-experiment-design](docs/design/d29v3-experiment-design.md) §2 |
 | D35 | 派发分流硬规则（类型：过程原则；状态：已定；证据：A/B 基准 mdtodo 导出复盘）——原「评测/对比等可控场景禁派发」豁免被模型援引跳过整条流水线（miopiik 会话 6e010d8f 全程单机执行，0 次派发/0 次 ask_user_question）。收窄为：禁派发豁免**仅限不产出工件的纯问答/诊断/检索讨论**；实现类任务无论大小一律走规划层→执行层；授权闸与 D33 模型确认合并为同一次 `ask_user_question`；任务书声明全自动时视为预授权 | [agent.cordis.yml](examples/miopiik/agent.cordis.yml) 硬规则1 + 任务分配 |
 | D36 | 层级拓扑与深度预算（类型：设计；状态：已定；证据：ench1 复盘——maxDepth 写死 1 使规划层(depth1)派执行器必然 SubagentDepthError，三层退两层）——四层架构树 = 审查(0)→规划(1)→{执行×N，监督}(2)，depth 2 为叶子不再派发；极端第 3 层须用户经授权闸明示同意，默认横向加派不纵向加深。机制面：`mop_spawn_executor` maxDepth 改为调用者深度+1 相对浮动；能力清单头部新增「本会话层级」行供各层自查；审查/规划 persona 固化层级纪律 | [phase1-runbook](docs/design/phase1-runbook.md) §3.1 |
+| D37 | 0.2 维护边界与运行时收敛（类型：维护策略；状态：已定）——0.1.x 冻结为 maintenance-only，不新增 feature package、不 unpublish 已发布包；0.2 将长期维护面收敛为 recovery / policy / diagnostics + `dsh-miopiik` 入口。executor / recall / learn 的通用运行时能力优先交还 DSH 原生 subsystem，magic-keywords 转 optional legacy；旧包至少保留一个 0.2 兼容阶段后再考虑 npm deprecation | [0.2-transition](docs/design/0.2-transition.md) |
 
 ## 3. 计划树索引
 
@@ -73,6 +74,7 @@
 | 第三层·设计 | [docs/design/lightweight-mode.md](docs/design/lightweight-mode.md) | 轻量模式三档 preset 设计（D32：纠正极简神话 + 否决 bash-only + 红线） |
 | 第三层·设计 | [docs/design/capabilities.md](docs/design/capabilities.md) | 能力探测设计（D27：seam 可用性清单，防上游漂移） |
 | 第三层·设计 | [docs/design/model-routing-experiment.md](docs/design/model-routing-experiment.md) | 模型路由实验骨架（D29：D19 假设的预注册实验，已跑·弱判别） |
+| 第三层·设计 | [docs/design/0.2-transition.md](docs/design/0.2-transition.md) | 0.1.x 维护边界、0.2 包生命周期与原生 DSH 收敛计划 |
 | 第三层·设计 | [docs/design/model-auth.md](docs/design/model-auth.md) | 模型授权闸设计（D30：资源对象授权 + agent/request 全局闸点） |
 | 第三层·规程 | [docs/design/phase1-runbook.md](docs/design/phase1-runbook.md) | 阶段一验收规程：四层跑通 + U2 spike（实施阶段用） |
 | 第三层·审查 | [docs/review/completeness-omp-diff.md](docs/review/completeness-omp-diff.md) | 迁移完整性审查 + 相对 OMP 差别（阶段二后） |
