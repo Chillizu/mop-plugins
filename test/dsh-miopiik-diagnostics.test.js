@@ -1,9 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-const { apply, applyCapabilities, applyRunStats } = await import(
-  '../packages/dsh-miopiik-diagnostics/index.js'
-)
+const { apply, applyCapabilities, applyRunStats } =
+  await import('../packages/dsh-miopiik-diagnostics/index.js')
 
 function baseCtx() {
   const registered = []
@@ -43,10 +42,10 @@ function baseCtx() {
 test('diagnostics default apply exposes both stable tool names', () => {
   const { ctx, registered } = baseCtx()
   apply(ctx)
-  assert.deepEqual(
-    registered.map((tool) => tool.name).sort(),
-    ['mop_probe_capabilities', 'mop_run_stats'],
-  )
+  assert.deepEqual(registered.map((tool) => tool.name).sort(), [
+    'mop_probe_capabilities',
+    'mop_run_stats',
+  ])
 })
 
 test('compatibility apply functions stay independently mountable', () => {
