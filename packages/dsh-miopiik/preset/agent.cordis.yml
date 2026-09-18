@@ -347,7 +347,7 @@
           ## 可知性三通道
 
           1. 报告推送：[EXEC] 报告（每周期 + 每 N 次交付）。
-          2. session_query：`session_search` / `session_event_search` / `session_trace` 读规划层会话日志。
+          2. recall：`mop_recall(query, scope="workspace")` 读同工作目录的规划层/历史会话消息；0.2 默认由 DSH `sessionQuery` 逻辑语料库提供。
           3. 落盘事实：`read` 读 `.dsh/progress/current.md`。
           报告与日志冲突时以日志为准。
 
@@ -364,11 +364,7 @@
           allow:
             - read
             - grep
-            - session_search
-            - session_event_search
-            - session_trace
-            - session_event_trace
-            - session_event_read
+            - mop_recall
 
     # Product providers are host-plane singletons (standard 原样保留，disabled).
     - id: tool-subagent-codex
@@ -420,9 +416,9 @@
     fetch: false
     searchTimeoutMs: 60000
 
-# Session history recall (D12) / supervisor visibility (D10/U2)：上游 rc.2 移除了
-# @deepseek-ai/dsh-tool-session-query 包（能力并入宿主工具面/按需经 sessionQuery
-# 服务自建），此行随之删除；恢复该行前须确认目标部署仍发布同名包。
+# Session history visibility (D12/D37)：不挂 model-facing tool-session-query。
+# mop_recall 0.2 native-first 直接使用宿主 ctx.sessionQuery 的 provider-independent
+# filterSessions/filterEvents；因此无需打开默认关闭的全文 FTS index。
 
 # ── recovery tools ────────────────────────────────────────────────────────
 
@@ -453,8 +449,9 @@
 
 # ── recall ───────────────────────────────────────────────────────────────────
 
-# MiOpIIk recall（0.1.8）：mop_recall(query, scope=workspace|session, …) 检索
-# ~/.dsh/sessions 下本工作目录历史会话日志（.jsonl.zstd，经 zstd 解压）中含查询词的行。
+# MiOpIIk recall（0.2 native-first）：mop_recall(query, scope=workspace|session, …)
+# 默认经 ctx.sessionQuery.filterSessions/filterEvents 读逻辑会话语料库；case-sensitive
+# 或 seam 缺失/失败时保留 0.1.x zstd scanner 兼容路径。
 - id: dsh-miopiik-recall
   name: 'dsh-miopiik-recall'
 
