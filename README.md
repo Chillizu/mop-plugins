@@ -101,10 +101,12 @@ DSH 兼容矩阵见 [`docs/design/dsh-compat.md`](docs/design/dsh-compat.md)。
 
 ## 插件清单（9 插件 + 1 套件包）
 
+> 下表保留 **0.1.x 已发布包的兼容清单**。0.2 默认装配已开始收敛：自动 checkpoint 由 `dsh-miopiik-tool-recovery` 承担，`dsh-miopiik-checkpoint` 仍保留为可安装兼容包，但不再由默认 meta/preset 挂载。
+
 | 包                                                                   | 类型     | 工具 / 行为                                                                                                                                                                                                                                                                     |
 | -------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`dsh-miopiik`](packages/dsh-miopiik/)                               | **套件** | 安装 9 个包依赖，其中 8 个为 0.2 默认运行时行；`dsh-miopiik-checkpoint` 暂留兼容依赖 + `npx dsh-miopiik` 初始化 miopiik preset                                                                                                                                                                                               |
-| [`dsh-miopiik-tool-recovery`](packages/dsh-miopiik-tool-recovery/)   | **核心恢复域** | 手动 `mop_checkpoint` + 事件驱动 `auto-turn` / `auto-error`、`mop_rewind`、`mop_checkpoint_list` / `prune`、会话级 rule inject/show/clear；0.2 起自动与手动 checkpoint 同域维护 |
+| [`dsh-miopiik`](packages/dsh-miopiik/)                               | **套件** | 一条命令装齐 9 插件（聚合 bundle patch）+ `npx dsh-miopiik` 初始化 miopiik preset                                                                                                                                                                                               |
+| [`dsh-miopiik-tool-recovery`](packages/dsh-miopiik-tool-recovery/)   | 恢复     | `mop_checkpoint`（记录目标会话 turn 边界 + git note）、`mop_rewind`（fork 到 checkpoint，含冷会话）、`mop_checkpoint_list`、`mop_checkpoint_prune`（按 `keep` 裁剪，dry-run 默认，`keep=0` 高风险）、`mop_rule_inject` / `mop_rule_show` / `mop_rule_clear`（会话级硬规则注入） |
 | [`dsh-miopiik-executor`](packages/dsh-miopiik-executor/)             | 执行     | `mop_spawn_executor`（一次性执行层子代理，**零默认零兜底**：model+provider 必须显式成对给出，省略/只给一边即抛错，无 Config 默认、不继承调用者；逐次指定 `timeoutMs` 硬超时）                                                                                                   |
 | [`dsh-miopiik-magic-keywords`](packages/dsh-miopiik-magic-keywords/) | hook     | 正文检测 `ultrathink` / `workflowz`（排除 code fence / inline code）→ `form: notice` 上下文消息注入（Config: `notices` dict）                                                                                                                                                   |
 | [`dsh-miopiik-model-auth`](packages/dsh-miopiik-model-auth/)         | 授权闸   | `mop_model_authorize` / `mop_model_revoke` / `mop_model_list` + `agent/request` 硬闸；**allowlist 工作区级**（`<workspace>/.dsh/memory/model-allowlist.md`，0.1.8+，跨工作区隔离；Config: `allowlistPath` 可显式覆盖）                                                          |
@@ -112,7 +114,7 @@ DSH 兼容矩阵见 [`docs/design/dsh-compat.md`](docs/design/dsh-compat.md)。
 | [`dsh-miopiik-learn`](packages/dsh-miopiik-learn/)                   | 学习     | `mop_learn`（把可复用流程铸成 `.dsh/skills/<name>/SKILL.md`，被 skill-filesystem 发现）、`mop_learn_list`（只读枚举已铸 skill 名称）                                                                                                                                            |
 | [`dsh-miopiik-run-stats`](packages/dsh-miopiik-run-stats/)           | 遥测     | `mop_run_stats`（D18 可编程 token 出口：读 session 累计四桶 uncached/cacheRead/cacheWrite/output，不计算价格/成本）                                                                                                                                                             |
 | [`dsh-miopiik-recall`](packages/dsh-miopiik-recall/)                 | 记忆     | `mop_recall`（会话/工作目录级历史消息检索：流式 zstd 解压扫描 `~/.dsh/sessions` 下本工作目录全部历史会话日志，命中行带时间/会话/角色；`scope=workspace` 默认 / `session` 只扫当前会话；大日志无上限）                                                                           |
-| [`dsh-miopiik-checkpoint`](packages/dsh-miopiik-checkpoint/)         | **兼容** | 保留给 0.1.x 风格的独立安装；0.2 默认 preset 不再挂载，本行为已并入 `dsh-miopiik-tool-recovery`。迁移窗口内保持可安装，不 unpublish |
+| [`dsh-miopiik-checkpoint`](packages/dsh-miopiik-checkpoint/)         | 记忆     | **里程碑自动检查点**（0.1.13）：根会话每轮关闭由 `agent/turn-stopping` 事件自动追加 `auto-turn` 行到 `.dsh/memory/checkpoints.md`，`agent/error` 记 `auto-error`；同 turn 去重，子代理轮次不写；`mop_checkpoint` 手动显式命名里程碑仍可用且互补                                 |
 
 ## 工具安全行为与限制
 
