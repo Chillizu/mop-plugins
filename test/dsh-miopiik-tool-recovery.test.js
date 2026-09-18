@@ -76,6 +76,89 @@ test('apply registers the seven recovery tools', () => {
   ])
 })
 
+
+function makeAutoCheckpointCtx() {
+  const state = { content: '', version: 0, writeCalls: 0 }
+  const fs = {
+    resolve: async () => ({ key: 'cp' }),
+    stat: async () =>
+      state.version === 0 ? undefined : { version: state.version },
+    readText: async () => state.content,
+    writeText: async (_target, content) => {
+      state.content = content
+      state.version += 1
+      state.writeCalls += 1
+    },
+  }
+  const base = makeCtx({ fs })
+  apply(base.ctx)
+  return { ...base, state }
+}
+
+function claimed(agentValue, turn, text) {
+  return {
+    agent: agentValue,
+    turn,
+    message: text
+      ? { content: [{ type: 'text', text }] }
+      : { content: [] },
+  }
+}
+
+test('recovery auto-checkpoint writes one auto-turn for a root turn', async () => {
+  const { listeners, state } = makeAutoCheckpointCtx()
+  const root = agent('session-root')
+  listeners['agent/inbox/claimed'](claimed(root, 3, 'implement phase A'))
+  await listeners['agent/turn-stopping']({ agent: root, turn: 3 })
+
+  assert.equal(state.writeCalls, 1)
+  assert.match(state.content, /auto-turn/)
+  assert.match(state.content, /session=session-root/)
+  assert.match(state.content, /turn=3/)
+  assert.match(state.content, /user: implement phase A/)
+})
+
+test('recovery auto-checkpoint deduplicates repeated turn-stopping', async () => {
+  const { listeners, state } = makeAutoCheckpointCtx()
+  const root = agent('session-root')
+  await listeners['agent/turn-stopping']({ agent: root, turn: 4 })
+  await listeners['agent/turn-stopping']({ agent: root, turn: 4 })
+
+  assert.equal(state.writeCalls, 1)
+  assert.match(state.content, /user: \(no user text\)/)
+})
+
+test('recovery auto-checkpoint ignores delegated child turns', async () => {
+  const { listeners, state } = makeAutoCheckpointCtx()
+  const child = agent('session-child')
+  child.session.header.delegationDepth = 1
+  listeners['agent/inbox/claimed'](claimed(child, 2, 'executor work'))
+  await listeners['agent/turn-stopping']({ agent: child, turn: 2 })
+
+  assert.equal(state.writeCalls, 0)
+  assert.equal(state.content, '')
+})
+
+test('recovery auto-checkpoint records only the first error per turn', async () => {
+  const { listeners, state } = makeAutoCheckpointCtx()
+  const root = agent('session-root')
+  await listeners['agent/error']({
+    agent: root,
+    turn: 7,
+    error: new Error('first failure'),
+  })
+  await listeners['agent/error']({
+    agent: root,
+    turn: 7,
+    error: new Error('second failure'),
+  })
+
+  assert.equal(state.writeCalls, 1)
+  assert.match(state.content, /auto-error/)
+  assert.match(state.content, /first failure/)
+  assert.doesNotMatch(state.content, /second failure/)
+})
+
 test('rule state is session-scoped', () => {
   const { ctx, registered } = makeCtx()
   apply(ctx)
