@@ -17,6 +17,7 @@ name: Composition
 # the PINNED value below. See test/composition/README.md.
 
 on:
+  pull_request: # TEMPORARY validation trigger for stacked PR #8; revert after evidence
   workflow_dispatch:
   schedule:
     - cron: '0 4 * * 1' # weekly Monday 04:00 UTC
