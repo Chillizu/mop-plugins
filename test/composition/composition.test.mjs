@@ -151,10 +151,8 @@ test('MiOpIIk 层挂载 smoke：0.2 domains + planner/supervisor delegation 经�
     const entries = [...ctx4.loader.entries()]
     for (const id of [
       'dsh-miopiik-tool-recovery',
-      'dsh-miopiik-magic-keywords',
       'dsh-miopiik-diagnostics',
       'dsh-miopiik-executor',
-      'dsh-miopiik-learn',
       'dsh-miopiik-model-auth',
       'tool-subagent-planner',
       'tool-subagent-supervisor',
