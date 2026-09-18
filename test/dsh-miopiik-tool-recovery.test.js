@@ -128,6 +128,19 @@ test('recovery auto-checkpoint deduplicates repeated turn-stopping', async () =>
   assert.match(state.content, /user: \(no user text\)/)
 })
 
+
+test('recovery auto-checkpoint dedupe is session-scoped', async () => {
+  const { listeners, state } = makeAutoCheckpointCtx()
+  const a = agent('session-a')
+  const b = agent('session-b')
+  await listeners['agent/turn-stopping']({ agent: a, turn: 1 })
+  await listeners['agent/turn-stopping']({ agent: b, turn: 1 })
+
+  assert.equal(state.writeCalls, 2)
+  assert.match(state.content, /session=session-a/)
+  assert.match(state.content, /session=session-b/)
+})
+
 test('recovery auto-checkpoint ignores delegated child turns', async () => {
   const { listeners, state } = makeAutoCheckpointCtx()
   const child = agent('session-child')
