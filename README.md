@@ -51,7 +51,7 @@ graph TD
    `dsh plugin --profile <profile> add dsh-miopiik` 装插件层 +
    `npx dsh-miopiik` 装 preset（用户未同意 preset 则跳过此步）。
    仅当用户明确选择源码安装时，才 clone 仓库并改用
-   `dsh plugin --profile <profile> add link:./packages/...` 逐个装 9 个包、
+   `dsh plugin --profile <profile> add link:./packages/...` 按本文当前逐包清单安装默认运行时包、
    再 `cp -r examples/miopiik "${DSH_HOME}/.agent-presets/miopiik"`。
    不跳过、不自造参数、不改动包内文件。
 
