@@ -195,6 +195,51 @@ test('mop_recall native maxLines 保持全局截断语义', async () => {
   assert.doesNotMatch(out, /should not be reached/)
 })
 
+test('mop_recall caseSensitive=true 明确绕过 native seam', async () => {
+  const { ctx, registered, calls } = makeNativeCtx({
+    sessions: [{ header: { id: 'session-native-a', cwd: CWD } }],
+  })
+  apply(ctx, { sessionsRoot: '/no/native-case-sensitive-logs' })
+  const tool = registered.find((x) => x.name === 'mop_recall')
+  const out = await tool.execute(
+    { query: 'PortalCase', caseSensitive: true },
+    { agent: { session: { header: { cwd: CWD } } } },
+  )
+
+  assert.equal(calls.filterSessions.length, 0)
+  assert.equal(calls.filterEvents.length, 0)
+  assert.match(out, /caseSensitive=true/)
+  assert.match(out, /\(no hits\)/)
+})
+
+test('mop_recall native seam 失败时回退 legacy scanner', async () => {
+  const registered = []
+  let nativeCalls = 0
+  const ctx = {
+    tools: { register: (tool) => registered.push(tool) },
+    get: (name) =>
+      name === 'sessionQuery'
+        ? {
+            filterSessions: async () => {
+              nativeCalls += 1
+              throw new Error('native seam unavailable')
+            },
+            filterEvents: async () => [],
+          }
+        : undefined,
+  }
+  apply(ctx, { sessionsRoot: '/no/fallback-logs' })
+  const tool = registered.find((x) => x.name === 'mop_recall')
+  const out = await tool.execute(
+    { query: 'fallback' },
+    { agent: { session: { header: { cwd: CWD } } } },
+  )
+
+  assert.equal(nativeCalls, 1)
+  assert.match(out, /sources=\/no\/fallback-logs/)
+  assert.match(out, /\(no hits\)/)
+})
+
 test('mop_recall 工作目录级命中并标注会话/角色/时间', async (t) => {
   if (!(await hasZstd())) return t.skip('zstd CLI 不可用')
   const root = await mkdtemp(join(tmpdir(), 'recall-'))
