@@ -92,7 +92,7 @@ with a label, then `mop_checkpoint_list`.
 
 本仓库包含重建 MiOpIIk 插件层与 preset 的全部材料：
 
-- **插件层**：9 个 `dsh-miopiik-*` 插件包（`packages/`）+ 测试 + 设计文档。
+- **插件层**：9 个 0.1.x 已发布兼容包 + 0.2 新增 `dsh-miopiik-diagnostics` 收敛域（`packages/`）+ 测试 + 设计文档。
 - **MiOpIIk agent preset**：persona 与 Cordis 组合行（planner / executor / supervisor 工具编排）。脱敏可重建模板在 [`examples/miopiik/`](examples/miopiik/)（复制为 `${DSH_HOME}/.agent-presets/miopiik/` 即可）；定稿 persona 的 draft 源在 [`docs/design/presets/drafts/`](docs/design/presets/drafts/)（`executor.prompt.md` 逐字同步进 `dsh-miopiik-executor` 的 `EXECUTOR_PERSONA`，其余 persona 由 `persona-sync` 测试与 `examples/miopiik` 副本保持一致）。
 
 不在库的只有作者私有运行态：API 凭据、模型 allowlist 内容（工作区级 `<workspace>/.dsh/memory/model-allowlist.md`，0.1.8 起不再使用全局文件，详见 [`docs/design/model-auth.md`](docs/design/model-auth.md)）、用户偏好与调研笔记（`docs/profile/`、`docs/research/`）。这是有意的脱敏边界——新部署需自行配置凭据，并用 `mop_model_authorize` 在自己的工作区建立 allowlist。
@@ -101,7 +101,7 @@ DSH 兼容矩阵见 [`docs/design/dsh-compat.md`](docs/design/dsh-compat.md)。
 
 ## 插件清单（9 插件 + 1 套件包）
 
-> 下表保留 **0.1.x 已发布包的兼容清单**。0.2 默认装配已开始收敛：自动 checkpoint 由 `dsh-miopiik-tool-recovery` 承担，`dsh-miopiik-checkpoint` 仍保留为可安装兼容包，但不再由默认 meta/preset 挂载。
+> 下表保留 **0.1.x 已发布包的兼容清单**。0.2 默认装配已开始收敛：自动 checkpoint 由 `dsh-miopiik-tool-recovery` 承担；capabilities + run-stats 的实现由新 `dsh-miopiik-diagnostics` 统一拥有。三个旧包仍保留为可安装兼容入口，但不再由默认 meta/preset 挂载。
 
 | 包                                                                   | 类型     | 工具 / 行为                                                                                                                                                                                                                                                                     |
 | -------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -133,7 +133,7 @@ DSH 兼容矩阵见 [`docs/design/dsh-compat.md`](docs/design/dsh-compat.md)。
 ### 方式一（推荐）：套件包一条命令
 
 ```bash
-# 插件层：一条命令安装套件；0.2 默认运行时挂载 8 行，checkpoint 兼容包仍随依赖保留但不再单独挂载
+# 插件层：一条命令安装套件；当前 0.2 收敛分支默认运行时挂载 7 行，兼容包仍随依赖保留但不再单独挂载
 dsh plugin --profile web add dsh-miopiik
 
 # preset 层（完整四层工作流需要）：初始化 miopiik preset 到 ${DSH_HOME}/.agent-presets/miopiik
@@ -152,13 +152,13 @@ dsh plugin --profile web add \
   dsh-miopiik-executor \
   dsh-miopiik-magic-keywords \
   dsh-miopiik-model-auth \
-  dsh-miopiik-capabilities \
+  dsh-miopiik-diagnostics \
   dsh-miopiik-learn \
-  dsh-miopiik-run-stats \
   dsh-miopiik-recall
 
 # 0.2: do not also add dsh-miopiik-checkpoint with tool-recovery.
 # The old package is compatibility-only; mounting both would duplicate auto-checkpoint events.
+# Likewise, do not add capabilities/run-stats alongside diagnostics in the default 0.2 profile; the old packages are standalone compatibility entries.
 ```
 
 需要完整四层工作流时再装 preset（脱敏模板在本仓库 `examples/miopiik/`）：
@@ -178,9 +178,8 @@ dsh plugin --profile web add \
   link:./packages/dsh-miopiik-executor \
   link:./packages/dsh-miopiik-magic-keywords \
   link:./packages/dsh-miopiik-model-auth \
-  link:./packages/dsh-miopiik-capabilities \
+  link:./packages/dsh-miopiik-diagnostics \
   link:./packages/dsh-miopiik-learn \
-  link:./packages/dsh-miopiik-run-stats \
   link:./packages/dsh-miopiik-recall
 ```
 
