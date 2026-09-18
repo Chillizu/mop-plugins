@@ -3,6 +3,18 @@
 所有对外可见的变更记录在本文件。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 SemVer，9 个插件包 + 套件包 `dsh-miopiik` 采用 **lockstep 版本**（同号同发）。
 
+## [Unreleased]
+
+### Changed
+
+- 定义 MiOpIIk 生命周期：`0.1.x` 进入稳定 DSH 兼容维护线，不再新增独立功能包；`0.2.x` 以 recovery / policy / diagnostics 三领域收敛长期维护面。
+- 明确已发布 npm 包不会进行大爆炸式移除：checkpoint/capabilities/run-stats 先进入合并迁移路径；executor/recall 进入兼容路径；learn/magic-keywords 从未来默认套件退出前保留显式 opt-in。
+- 明确优先复用 DSH 原生 subagent、session-query、skill 与 token telemetry；MiOpIIk 长期拥有工作流 policy、恢复/交接语义与验收契约，而非重复 runtime infrastructure。
+
+### Documentation
+
+- 新增 `docs/LIFECYCLE.md`，作为 0.2 收敛与 package 生命周期的事实源。
+
 ## [0.1.13] - 2026-08-28
 
 ### Added
