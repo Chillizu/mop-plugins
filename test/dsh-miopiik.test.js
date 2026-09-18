@@ -55,6 +55,12 @@ test('meta dependencies retain the checkpoint compatibility package', () => {
   assert.ok(pkg.bin && typeof pkg.bin['dsh-miopiik'] === 'string')
 })
 
+test('0.2 preset mounts recovery but not the standalone checkpoint compatibility row', () => {
+  const yaml = readFileSync(join(META, 'preset', 'agent.cordis.yml'), 'utf8')
+  assert.match(yaml, /- id: dsh-miopiik-tool-recovery\b/)
+  assert.doesNotMatch(yaml, /- id: dsh-miopiik-checkpoint\b/)
+})
+
 test('bundled preset stays byte-identical to examples/miopiik', () => {
   const src = join(ROOT, 'examples', 'miopiik')
   const dst = join(META, 'preset')
