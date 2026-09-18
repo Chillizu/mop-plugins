@@ -1,6 +1,6 @@
 {
   "name": "dsh-miopiik-recall",
-  "description": "MiOpIIk recall：会话级/工作目录级历史消息检索——查找本会话或本工作目录所有历史 agent 消息中包含查询词的行",
+  "description": "MiOpIIk recall compatibility adapter: native DSH sessionQuery filters first, legacy zstd log scan fallback for case-sensitive/older deployments. 原生 sessionQuery 优先的历史消息检索兼容层",
   "version": "0.1.13",
   "type": "module",
   "main": "index.js",
