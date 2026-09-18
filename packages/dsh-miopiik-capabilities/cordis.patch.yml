@@ -1,3 +1,6 @@
+# Compatibility bundle for 0.1.x-style standalone installs.
+# The 0.2 default suite mounts dsh-miopiik-diagnostics instead; this row remains
+# available for users who explicitly install dsh-miopiik-capabilities.
 - insert:
     - id: dsh-miopiik-capabilities
       name: 'dsh-miopiik-capabilities'

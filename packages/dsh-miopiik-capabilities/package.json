@@ -1,6 +1,6 @@
 {
   "name": "dsh-miopiik-capabilities",
-  "description": "Non-destructive DSH seam capability probe writing a two-evidence-level manifest (present vs invoked-ok). DSH seam 能力探测，输出现场/实调双证据能力清单",
+  "description": "Compatibility package for MiOpIIk capability probing; implementation is owned by dsh-miopiik-diagnostics in 0.2. 兼容包：能力探测实现已并入 diagnostics",
   "version": "0.1.13",
   "type": "module",
   "main": "index.js",
@@ -44,5 +44,8 @@
   "bugs": {
     "url": "https://github.com/Chillizu/mop-plugins/issues"
   },
-  "homepage": "https://github.com/Chillizu/mop-plugins/tree/main/packages/dsh-miopiik-capabilities#readme"
+  "homepage": "https://github.com/Chillizu/mop-plugins/tree/main/packages/dsh-miopiik-capabilities#readme",
+  "dependencies": {
+    "dsh-miopiik-diagnostics": "^0.1.13"
+  }
 }

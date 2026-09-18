@@ -45,13 +45,14 @@
   },
   "dependencies": {
     "dsh-miopiik-capabilities": "^0.1.13",
+    "dsh-miopiik-checkpoint": "^0.1.13",
+    "dsh-miopiik-diagnostics": "^0.1.13",
     "dsh-miopiik-executor": "^0.1.13",
     "dsh-miopiik-learn": "^0.1.13",
     "dsh-miopiik-magic-keywords": "^0.1.13",
     "dsh-miopiik-model-auth": "^0.1.13",
-    "dsh-miopiik-run-stats": "^0.1.13",
-    "dsh-miopiik-tool-recovery": "^0.1.13",
     "dsh-miopiik-recall": "^0.1.13",
-    "dsh-miopiik-checkpoint": "^0.1.13"
+    "dsh-miopiik-run-stats": "^0.1.13",
+    "dsh-miopiik-tool-recovery": "^0.1.13"
   }
 }

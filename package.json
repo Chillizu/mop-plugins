@@ -18,7 +18,7 @@
   "scripts": {
     "test": "node --import ./test/register-mocks.mjs --test \"test/*.test.js\"",
     "test:composition": "node --test \"test/composition/*.test.mjs\"",
-    "check": "node --check packages/dsh-miopiik-tool-recovery/index.js && node --check packages/dsh-miopiik-magic-keywords/index.js && node --check packages/dsh-miopiik-capabilities/index.js && node --check packages/dsh-miopiik-executor/index.js && node --check packages/dsh-miopiik-learn/index.js && node --check packages/dsh-miopiik-model-auth/index.js && node --check packages/dsh-miopiik-run-stats/index.js && node --check packages/dsh-miopiik-recall/index.js && node --check packages/dsh-miopiik-checkpoint/index.js && node --check packages/dsh-miopiik/bin/dsh-miopiik-init.mjs",
+    "check": "node --check packages/dsh-miopiik-tool-recovery/index.js && node --check packages/dsh-miopiik-magic-keywords/index.js && node --check packages/dsh-miopiik-diagnostics/index.js && node --check packages/dsh-miopiik-capabilities/index.js && node --check packages/dsh-miopiik-executor/index.js && node --check packages/dsh-miopiik-learn/index.js && node --check packages/dsh-miopiik-model-auth/index.js && node --check packages/dsh-miopiik-run-stats/index.js && node --check packages/dsh-miopiik-recall/index.js && node --check packages/dsh-miopiik-checkpoint/index.js && node --check packages/dsh-miopiik/bin/dsh-miopiik-init.mjs",
     "lint": "eslint .",
     "format:check": "prettier --check ."
   },

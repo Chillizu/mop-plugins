@@ -437,11 +437,12 @@
 - id: dsh-miopiik-magic-keywords
   name: 'dsh-miopiik-magic-keywords'
 
-# ── capabilities ──────────────────────────────────────────────────────────
+# ── diagnostics ────────────────────────────────────────────────────────────
 
-# MiOpIIk 能力探测（D27）：seam 可用性清单，防上游漂移。
-- id: dsh-miopiik-capabilities
-  name: 'dsh-miopiik-capabilities'
+# MiOpIIk 0.2 诊断域（D18/D27/D37）：seam 兼容探测 + token usage 可编程出口。
+# 旧 capabilities / run-stats 包保留为兼容入口，但默认 preset 只挂这一行。
+- id: dsh-miopiik-diagnostics
+  name: 'dsh-miopiik-diagnostics'
 
 # ── executor ────────────────────────────────────────────────────────────────
 
@@ -461,12 +462,6 @@
 - id: dsh-miopiik-model-auth
   name: 'dsh-miopiik-model-auth'
 
-# ── run stats ────────────────────────────────────────────────────────────────
-
-# MiOpIIk 可编程 token 出口（D18）：mop_run_stats(sessionId) 读 sessionProjections
-# tokenUsage 累计桶（live-first + coldSnapshot 兜底），供实验门/审查层逐 run 计量 token。
-- id: dsh-miopiik-run-stats
-  name: 'dsh-miopiik-run-stats'
 
 # ── recall ───────────────────────────────────────────────────────────────────
 

@@ -1,7 +1,7 @@
 # Changelog
 
 所有对外可见的变更记录在本文件。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
-版本号遵循 SemVer，9 个插件包 + 套件包 `dsh-miopiik` 采用 **lockstep 版本**（同号同发）。
+版本号遵循 SemVer；同一 release train 中实际发布的 `dsh-miopiik-*` 包 + 套件包 `dsh-miopiik` 采用 **lockstep 版本**（同号同发）。
 
 ## [Unreleased]
 
@@ -11,6 +11,7 @@
 - Added the 0.2 transition contract: retain the published packages for compatibility while converging long-term ownership on recovery, policy and diagnostics; executor/recall/learn move toward native DSH capabilities and magic-keywords becomes optional legacy functionality.
 - No runtime bundle membership changes are made by this maintenance step.
 - **0.2 recovery migration (implementation branch):** `dsh-miopiik-tool-recovery` now owns event-driven `auto-turn` / `auto-error` persistence in addition to manual checkpoint/rewind/prune. The default preset stops mounting `dsh-miopiik-checkpoint`; the old package remains published/installable as a compatibility surface and stays a meta-package dependency for one migration window.
+- **0.2 diagnostics migration (stacked implementation):** added `dsh-miopiik-diagnostics` as the single owner of capability probing and token run-stat logic. `dsh-miopiik-capabilities` / `dsh-miopiik-run-stats` become thin compatibility wrappers; default meta/preset mount only diagnostics while retaining the old packages as migration dependencies.
 
 ## [0.1.13] - 2026-08-28
 

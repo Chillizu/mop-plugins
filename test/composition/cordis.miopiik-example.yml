@@ -1,4 +1,4 @@
-# MiOpIIk 层挂载 smoke fixture：证明「7 个 mop 包 + planner/supervisor 层派发行」
+# MiOpIIk 层挂载 smoke fixture：证明「6 个 MiOpIIk 运行时域/插件 + planner/supervisor 层派发行」
 # 经真实 Loader 可挂载（inject 联合被真实 DSH 服务满足），而不只是 mock 测试里各自
 # register。这是 examples/miopiik 的可自动化最小面。
 #
@@ -90,8 +90,8 @@
 - id: dsh-miopiik-magic-keywords
   name: 'dsh-miopiik-magic-keywords'
 
-- id: dsh-miopiik-capabilities
-  name: 'dsh-miopiik-capabilities'
+- id: dsh-miopiik-diagnostics
+  name: 'dsh-miopiik-diagnostics'
 
 - id: dsh-miopiik-executor
   name: 'dsh-miopiik-executor'
@@ -101,6 +101,3 @@
 
 - id: dsh-miopiik-model-auth
   name: 'dsh-miopiik-model-auth'
-
-- id: dsh-miopiik-run-stats
-  name: 'dsh-miopiik-run-stats'

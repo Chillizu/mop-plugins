@@ -1,0 +1,4 @@
+# MiOpIIk 0.2 diagnostics domain.
+- insert:
+    - id: dsh-miopiik-diagnostics
+      name: dsh-miopiik-diagnostics

@@ -1,6 +1,6 @@
 {
-  "name": "dsh-miopiik-run-stats",
-  "description": "Compatibility package for MiOpIIk token run stats; implementation is owned by dsh-miopiik-diagnostics in 0.2. 兼容包：token 遥测实现已并入 diagnostics",
+  "name": "dsh-miopiik-diagnostics",
+  "description": "MiOpIIk diagnostics domain: DSH compatibility/seam probing plus programmatic token usage telemetry. 诊断域：能力兼容探测 + token 遥测出口",
   "version": "0.1.13",
   "type": "module",
   "main": "index.js",
@@ -19,14 +19,10 @@
     }
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-tools": "*",
-    "@deepseek-ai/schemastery": "*"
+    "@deepseek-ai/dsh-tools": "*"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/dsh-tools": {
-      "optional": true
-    },
-    "@deepseek-ai/schemastery": {
       "optional": true
     }
   },
@@ -34,6 +30,8 @@
     "deepseek-harness",
     "dsh-plugin",
     "cordis",
+    "diagnostics",
+    "compatibility",
     "token-usage",
     "telemetry"
   ],
@@ -48,8 +46,5 @@
   "bugs": {
     "url": "https://github.com/Chillizu/mop-plugins/issues"
   },
-  "homepage": "https://github.com/Chillizu/mop-plugins/tree/main/packages/dsh-miopiik-run-stats#readme",
-  "dependencies": {
-    "dsh-miopiik-diagnostics": "^0.1.13"
-  }
+  "homepage": "https://github.com/Chillizu/mop-plugins/tree/main/packages/dsh-miopiik-diagnostics#readme"
 }
