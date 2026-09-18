@@ -201,8 +201,9 @@ test('emoji in executor output is stripped structurally', async () => {
   assert.match(result, /完成\s+改了 a\.js/)
 })
 
-test('timeoutMs aborts the child and returns an [aborted] timeout with session id', async () => {
+test('timeoutMs aborts, disposes, and returns an [aborted] timeout with session id', async () => {
   const { ctx, registered, starts } = makeCtx()
+  let disposed = 0
   ctx.subagents.start = async (name, request) => {
     starts.push({ name, request })
     const result = new Promise((resolve) => {
@@ -212,7 +213,11 @@ test('timeoutMs aborts the child and returns an [aborted] timeout with session i
         { once: true },
       )
     })
-    return makeRun('exec-session-1', result)
+    return makeRun('exec-session-1', result, {
+      onDispose: async () => {
+        disposed += 1
+      },
+    })
   }
   const tool = getTool(ctx, registered)
   const result = await tool.execute(
@@ -222,6 +227,7 @@ test('timeoutMs aborts the child and returns an [aborted] timeout with session i
   assert.match(result, /\[aborted\] executor timed out after 20ms/)
   assert.match(result, /\[executor-session: exec-session-1\]/)
   assert.equal(starts[0].request.signal.aborted, true)
+  assert.equal(disposed, 1)
 })
 
 test('timeout before publication with a rejecting start returns timeout (no hang)', async () => {
@@ -261,8 +267,9 @@ test('already-aborted caller signal short-circuits before spawning', async () =>
   assert.equal(starts.length, 0)
 })
 
-test('caller cancellation during the run is distinguished from timeout', async () => {
+test('caller cancellation during the run disposes and stays distinct from timeout', async () => {
   const { ctx, registered, starts } = makeCtx()
+  let disposed = 0
   ctx.subagents.start = async (name, request) => {
     starts.push({ name, request })
     const result = new Promise((resolve) => {
@@ -272,7 +279,11 @@ test('caller cancellation during the run is distinguished from timeout', async (
         { once: true },
       )
     })
-    return makeRun('exec-session-1', result)
+    return makeRun('exec-session-1', result, {
+      onDispose: async () => {
+        disposed += 1
+      },
+    })
   }
   const tool = getTool(ctx, registered)
   const caller = new AbortController()
@@ -284,6 +295,7 @@ test('caller cancellation during the run is distinguished from timeout', async (
   const result = await pending
   assert.match(result, /\[aborted\] executor cancelled/)
   assert.doesNotMatch(result, /timed out/)
+  assert.equal(disposed, 1)
 })
 
 test('timeoutMs rejects non-finite / non-positive values', async () => {
@@ -320,13 +332,22 @@ test('Config.strict=true drops bash/write from the executor tool face (edit kept
 
 // ── B1 真因回归：子代理以失败态 resolve（stopReason='error'）而非 reject ──────
 
-test('stopReason=error 结果返回可读失败文案（子会话 id + 原因/指引）', async () => {
+test('stopReason=error 结果仍会 dispose 子会话', async () => {
   const { ctx, registered } = makeCtx()
+  let disposed = 0
   ctx.subagents.start = async () =>
-    makeRun('exec-session-fail-1', {
-      stopReason: 'error',
-      output: [],
-    })
+    makeRun(
+      'exec-session-fail-1',
+      {
+        stopReason: 'error',
+        output: [],
+      },
+      {
+        onDispose: async () => {
+          disposed += 1
+        },
+      },
+    )
   apply(ctx)
   const tool = registered.find((t) => t.name === 'mop_spawn_executor')
   const out = await tool.execute(
@@ -338,6 +359,33 @@ test('stopReason=error 结果返回可读失败文案（子会话 id + 原因/�
     /\[error\] executor 子代理失败（stopReason=error，见子会话 exec-session-fail-1）/,
   )
   assert.match(out, /见子会话日志（常见：模型闸拒绝、深度超限、工具限制）/)
+  assert.equal(disposed, 1)
+})
+
+test('dispose failure is surfaced after an otherwise successful executor run', async () => {
+  const { ctx, registered } = makeCtx()
+  ctx.subagents.start = async () =>
+    makeRun(
+      'exec-session-dispose-fail',
+      {
+        stopReason: 'completed',
+        output: [{ type: 'text', text: 'done' }],
+      },
+      {
+        onDispose: async () => {
+          throw new Error('cleanup exploded')
+        },
+      },
+    )
+  const tool = getTool(ctx, registered)
+  await assert.rejects(
+    () =>
+      tool.execute(
+        { prompt: 'task', ...EXEC_MODEL },
+        { agent: { session: { id: 's1' } } },
+      ),
+    /executor 子代理清理失败.*cleanup exploded/,
+  )
 })
 
 test('stopReason=error 且 result.error.message 存在时原样拼入', async () => {
