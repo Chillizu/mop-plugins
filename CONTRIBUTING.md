@@ -26,6 +26,16 @@
 - persona「定稿源 ↔ 运行时副本」逐字同步由 `test/persona-sync.test.js` 钉死；meta 包的 preset/ 副本与 examples/miopiik 的逐字一致由 `test/dsh-miopiik.test.js` 钉死。改一处必须同步另一处；
 - 改动涉及设计决策时：先改 `docs/PLAN.md` 对应决策行 → 同步承载文档代码块 → 在 philosophy-audit §2 登记漂移修复（详见 PLAN.md §6 维护规则）。
 
+## 范围门禁
+
+为避免维护面继续横向膨胀：
+
+- `0.1.x` 不新增独立 `dsh-miopiik-*` 功能包；仅接安全、严重正确性、DSH 兼容和文档修复。
+- 新需求先判断是否已有 DSH 原生 primitive。已有时优先写 MiOpIIk policy / adapter，不复制 runtime。
+- 新的长期能力必须能归入 recovery / policy / diagnostics 之一；否则默认进入 optional / experiment，而不是 meta 套件依赖。
+- 修改 package 生命周期、默认套件成员或替代路径时，同步更新 `docs/LIFECYCLE.md`、README 和 CHANGELOG。
+- 0.2 的目标是缩小 adapter 面；如果一个上游 seam 漂移要求同时修改多个 MiOpIIk 包，应优先重画边界而不是继续补兼容代码。
+
 ## 版本策略（lockstep）
 
 9 个插件包 + 套件包 `dsh-miopiik` 同号同发：
