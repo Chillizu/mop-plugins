@@ -1,3 +1,5 @@
+# Optional MiOpIIk 0.2 package: no longer mounted by the default meta/preset.
+# Install this bundle explicitly when magic-keywords behavior is desired.
 - insert:
     - id: dsh-miopiik-magic-keywords
       name: 'dsh-miopiik-magic-keywords'
