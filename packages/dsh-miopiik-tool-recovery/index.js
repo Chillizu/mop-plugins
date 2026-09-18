@@ -82,19 +82,23 @@ function installAutoCheckpoint(ctx, fs, sandboxPolicy) {
     }
   }
 
-  ctx.on('agent/inbox/claimed', ({ message, turn }) => {
+  ctx.on('agent/inbox/claimed', ({ agent, message, turn }) => {
+    const root = rootOf(agent)
+    if (!root) return
+    const key = `${root.id}\u0000${turn}`
     const text = autoMessageText(message && message.content)
       .replace(/\s+/g, ' ')
       .trim()
-    if (text) claimedByTurn.set(turn, text)
+    if (text) claimedByTurn.set(key, text)
   })
 
   ctx.on('agent/turn-stopping', async ({ agent, turn, signal }) => {
-    if (writtenTurns.has(turn)) return
-    writtenTurns.add(turn)
     const root = rootOf(agent)
     if (!root) return
-    const user = (claimedByTurn.get(turn) || '').slice(0, AUTO_SUMMARY_CHARS)
+    const key = `${root.id}\u0000${turn}`
+    if (writtenTurns.has(key)) return
+    writtenTurns.add(key)
+    const user = (claimedByTurn.get(key) || '').slice(0, AUTO_SUMMARY_CHARS)
     const line = [
       `- [${new Date().toISOString()}] auto-turn`,
       `session=${root.id}`,
@@ -105,10 +109,11 @@ function installAutoCheckpoint(ctx, fs, sandboxPolicy) {
   })
 
   ctx.on('agent/error', async ({ agent, turn, error, signal }) => {
-    if (erroredTurns.has(turn)) return
-    erroredTurns.add(turn)
     const root = rootOf(agent)
     if (!root) return
+    const key = `${root.id}\u0000${turn}`
+    if (erroredTurns.has(key)) return
+    erroredTurns.add(key)
     const detail = String((error && error.message) || error)
       .replace(/\s+/g, ' ')
       .trim()
