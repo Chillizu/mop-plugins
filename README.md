@@ -5,6 +5,8 @@
 
 MiOpIIk 的 DeepSeek Harness（DSH）插件集。
 
+> **Maintenance direction (0.1.x → 0.2):** 0.1.x is now a maintenance line. No published package is being removed or unpublished. The 0.2 plan reduces long-term ownership to recovery, policy and diagnostics, while delegating generic executor/session-search/skill runtime mechanics to native DSH. See [MiOpIIk 0.2 transition plan](docs/design/0.2-transition.md).
+
 **English**: MiOpIIk is a single-responsibility plugin suite for the DeepSeek Harness — checkpoint/rewind recovery, **event-driven auto checkpoints** (every root-session turn lands a recovery line), historical-session recall, controlled executor subagents with a **zero-default model contract**, a **workspace-scoped model authorization gate**, seam-capability probing, token telemetry, and a four-layer (reviewer/planner/supervisor/executor) agent workflow preset. Install all of it with one command: `dsh plugin --profile web add dsh-miopiik`.
 
 ## 架构总览
