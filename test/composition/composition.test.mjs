@@ -165,7 +165,10 @@ test('MiOpIIk 层挂载 smoke：0.2 default domains + planner/supervisor delegat
       assert.ok(entry && entry.fiber, `${id} entry must be mounted and active`)
     }
     const executor = ctx4.tools.get('mop_spawn_executor')
-    assert.ok(executor, 'mop_spawn_executor must be visible after real Loader mount')
+    assert.ok(
+      executor,
+      'mop_spawn_executor must be visible after real Loader mount',
+    )
     await assert.rejects(
       executor.execute(
         { prompt: 'composition policy probe' },
