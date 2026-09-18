@@ -22,7 +22,6 @@ const CHECKPOINT_LINE =
 // checkpoint 落点（D13，docs/design/recovery-toolkit.md）：项目 .dsh/memory/checkpoints.md，同包内写/读三处必须同一路径。
 const CHECKPOINTS_REL_PATH = '.dsh/memory/checkpoints.md'
 
-
 const AUTO_SUMMARY_CHARS = 120
 
 function textOfAutoBlock(block) {
