@@ -14,6 +14,7 @@
 - **0.2 diagnostics migration (stacked implementation):** added `dsh-miopiik-diagnostics` as the single owner of capability probing and token run-stat logic. `dsh-miopiik-capabilities` / `dsh-miopiik-run-stats` become thin compatibility wrappers; default meta/preset mount only diagnostics while retaining the old packages as migration dependencies.
 - **0.2 optional-surface reduction (stacked implementation):** `dsh-miopiik-magic-keywords` and `dsh-miopiik-learn` leave the default meta/preset runtime. Both remain installable, tested packages and stay as migration dependencies; users opt in explicitly when they want hidden keyword notices or the legacy learn workflow.
 - **0.2 recall migration:** `mop_recall` is now native-first over DSH `sessionQuery.filterSessions/filterEvents` for the normal case-insensitive path, eliminating dependence on the private `~/.dsh/sessions` layout during ordinary use. `caseSensitive=true`, a missing native seam, or a non-cancellation native failure retains the streaming zstd scanner as a compatibility fallback.
+- **0.2 executor policy hardening:** `mop_spawn_executor` is formally treated as a policy adapter over DSH native `ctx.subagents.start`, not a parallel runtime. Public routing/timeout/output contracts stay stable; every published `SubagentRun` is now disposed after success, child failure, cancellation or timeout, and cleanup failures are surfaced instead of silently leaking resources.
 
 ## [0.1.13] - 2026-08-28
 

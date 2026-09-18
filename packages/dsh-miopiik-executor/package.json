@@ -1,6 +1,6 @@
 {
   "name": "dsh-miopiik-executor",
-  "description": "Controlled one-shot executor subagents with persona, tool allowlist, timeout and cancellation. 受控一次性执行层子代理（persona + 工具白名单 + 超时取消）",
+  "description": "MiOpIIk one-shot execution policy adapter over native DSH subagents: explicit zero-default routing, leaf depth, persona/tool scope, timeout/cancel and bounded result presentation. 原生 DSH subagent 上的执行策略适配层",
   "version": "0.1.13",
   "type": "module",
   "main": "index.js",

@@ -164,6 +164,19 @@ test('MiOpIIk 层挂载 smoke：0.2 default domains + planner/supervisor delegat
       const entry = entries.find((e) => e.options.id === id)
       assert.ok(entry && entry.fiber, `${id} entry must be mounted and active`)
     }
+    const executor = ctx4.tools.get('mop_spawn_executor')
+    assert.ok(
+      executor,
+      'mop_spawn_executor must be visible after real Loader mount',
+    )
+    await assert.rejects(
+      executor.execute(
+        { prompt: 'composition policy probe' },
+        { signal: new AbortController().signal },
+      ),
+      /未指定执行层模型/,
+      'real Loader mount must preserve MiOpIIk zero-default fail-closed routing',
+    )
   } finally {
     await ctx4.fiber.dispose()
   }

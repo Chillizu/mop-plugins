@@ -6,9 +6,18 @@ const { apply } = await import('../packages/dsh-miopiik-executor/index.js')
 // 新契约下任何 spawn 都应显式带 model+provider（零默认零兜底）。
 const EXEC_MODEL = { model: 'mimo-v2.5', provider: 'opencode-go' }
 
+function makeRun(id, result, { onDispose = async () => {} } = {}) {
+  return {
+    id,
+    result: Promise.resolve(result),
+    dispose: onDispose,
+  }
+}
+
 function makeCtx() {
   const registered = []
   const starts = []
+  const disposals = []
   const ctx = {
     tools: {
       register: (tool) => {
@@ -19,17 +28,18 @@ function makeCtx() {
     subagents: {
       start: async (name, request) => {
         starts.push({ name, request })
-        return {
-          id: 'exec-session-1',
-          result: Promise.resolve({
+        return makeRun(
+          'exec-session-1',
+          {
             stopReason: 'completed',
             output: [{ type: 'text', text: 'done' }],
-          }),
-        }
+          },
+          { onDispose: async () => disposals.push('exec-session-1') },
+        )
       },
     },
   }
-  return { ctx, registered, starts }
+  return { ctx, registered, starts, disposals }
 }
 
 function getTool(ctx, registered) {
@@ -112,7 +122,7 @@ test("model='inherit' is rejected (inheritance channel removed)", async () => {
 // ── 非模型契约回归（均显式带 model+provider）──────────────────────────────
 
 test('mop_spawn_executor passes model + toolFilter and returns output', async () => {
-  const { ctx, registered, starts } = makeCtx()
+  const { ctx, registered, starts, disposals } = makeCtx()
   const tool = getTool(ctx, registered)
   const result = await tool.execute(
     { prompt: 'task', ...EXEC_MODEL },
@@ -136,6 +146,7 @@ test('mop_spawn_executor passes model + toolFilter and returns output', async ()
     'bash',
     'todo_write',
   ])
+  assert.deepEqual(disposals, ['exec-session-1'])
 })
 
 test('maxDepth is absolute-parent+1: planner (depth 1) can spawn executors', async () => {
@@ -155,13 +166,11 @@ test('maxDepth is absolute-parent+1: planner (depth 1) can spawn executors', asy
 
 test('long output is truncated with a pointer to the executor session', async () => {
   const { ctx, registered } = makeCtx()
-  ctx.subagents.start = async () => ({
-    id: 'exec-session-1',
-    result: Promise.resolve({
+  ctx.subagents.start = async () =>
+    makeRun('exec-session-1', {
       stopReason: 'completed',
       output: [{ type: 'text', text: 'x'.repeat(9000) }],
-    }),
-  })
+    })
   const tool = getTool(ctx, registered)
   const result = await tool.execute(
     { prompt: 'task', ...EXEC_MODEL },
@@ -173,13 +182,11 @@ test('long output is truncated with a pointer to the executor session', async ()
 
 test('emoji in executor output is stripped structurally', async () => {
   const { ctx, registered } = makeCtx()
-  ctx.subagents.start = async () => ({
-    id: 'exec-session-1',
-    result: Promise.resolve({
+  ctx.subagents.start = async () =>
+    makeRun('exec-session-1', {
       stopReason: 'completed',
       output: [{ type: 'text', text: '完成 🚀 改了 a.js ✅' }],
-    }),
-  })
+    })
   const tool = getTool(ctx, registered)
   const result = await tool.execute(
     { prompt: 'task', ...EXEC_MODEL },
@@ -190,8 +197,9 @@ test('emoji in executor output is stripped structurally', async () => {
   assert.match(result, /完成\s+改了 a\.js/)
 })
 
-test('timeoutMs aborts the child and returns an [aborted] timeout with session id', async () => {
+test('timeoutMs aborts, disposes, and returns an [aborted] timeout with session id', async () => {
   const { ctx, registered, starts } = makeCtx()
+  let disposed = 0
   ctx.subagents.start = async (name, request) => {
     starts.push({ name, request })
     const result = new Promise((resolve) => {
@@ -201,7 +209,11 @@ test('timeoutMs aborts the child and returns an [aborted] timeout with session i
         { once: true },
       )
     })
-    return { id: 'exec-session-1', result }
+    return makeRun('exec-session-1', result, {
+      onDispose: async () => {
+        disposed += 1
+      },
+    })
   }
   const tool = getTool(ctx, registered)
   const result = await tool.execute(
@@ -211,6 +223,7 @@ test('timeoutMs aborts the child and returns an [aborted] timeout with session i
   assert.match(result, /\[aborted\] executor timed out after 20ms/)
   assert.match(result, /\[executor-session: exec-session-1\]/)
   assert.equal(starts[0].request.signal.aborted, true)
+  assert.equal(disposed, 1)
 })
 
 test('timeout before publication with a rejecting start returns timeout (no hang)', async () => {
@@ -224,10 +237,7 @@ test('timeout before publication with a rejecting start returns timeout (no hang
         { once: true },
       )
     })
-    return {
-      id: 'never',
-      result: Promise.resolve({ stopReason: 'completed', output: [] }),
-    }
+    return makeRun('never', { stopReason: 'completed', output: [] })
   }
   const tool = getTool(ctx, registered)
   const result = await tool.execute(
@@ -253,8 +263,9 @@ test('already-aborted caller signal short-circuits before spawning', async () =>
   assert.equal(starts.length, 0)
 })
 
-test('caller cancellation during the run is distinguished from timeout', async () => {
+test('caller cancellation during the run disposes and stays distinct from timeout', async () => {
   const { ctx, registered, starts } = makeCtx()
+  let disposed = 0
   ctx.subagents.start = async (name, request) => {
     starts.push({ name, request })
     const result = new Promise((resolve) => {
@@ -264,7 +275,11 @@ test('caller cancellation during the run is distinguished from timeout', async (
         { once: true },
       )
     })
-    return { id: 'exec-session-1', result }
+    return makeRun('exec-session-1', result, {
+      onDispose: async () => {
+        disposed += 1
+      },
+    })
   }
   const tool = getTool(ctx, registered)
   const caller = new AbortController()
@@ -276,6 +291,7 @@ test('caller cancellation during the run is distinguished from timeout', async (
   const result = await pending
   assert.match(result, /\[aborted\] executor cancelled/)
   assert.doesNotMatch(result, /timed out/)
+  assert.equal(disposed, 1)
 })
 
 test('timeoutMs rejects non-finite / non-positive values', async () => {
@@ -312,15 +328,22 @@ test('Config.strict=true drops bash/write from the executor tool face (edit kept
 
 // ── B1 真因回归：子代理以失败态 resolve（stopReason='error'）而非 reject ──────
 
-test('stopReason=error 结果返回可读失败文案（子会话 id + 原因/指引）', async () => {
+test('stopReason=error 结果仍会 dispose 子会话', async () => {
   const { ctx, registered } = makeCtx()
-  ctx.subagents.start = async () => ({
-    id: 'exec-session-fail-1',
-    result: Promise.resolve({
-      stopReason: 'error',
-      output: [],
-    }),
-  })
+  let disposed = 0
+  ctx.subagents.start = async () =>
+    makeRun(
+      'exec-session-fail-1',
+      {
+        stopReason: 'error',
+        output: [],
+      },
+      {
+        onDispose: async () => {
+          disposed += 1
+        },
+      },
+    )
   apply(ctx)
   const tool = registered.find((t) => t.name === 'mop_spawn_executor')
   const out = await tool.execute(
@@ -332,20 +355,45 @@ test('stopReason=error 结果返回可读失败文案（子会话 id + 原因/�
     /\[error\] executor 子代理失败（stopReason=error，见子会话 exec-session-fail-1）/,
   )
   assert.match(out, /见子会话日志（常见：模型闸拒绝、深度超限、工具限制）/)
+  assert.equal(disposed, 1)
+})
+
+test('dispose failure is surfaced after an otherwise successful executor run', async () => {
+  const { ctx, registered } = makeCtx()
+  ctx.subagents.start = async () =>
+    makeRun(
+      'exec-session-dispose-fail',
+      {
+        stopReason: 'completed',
+        output: [{ type: 'text', text: 'done' }],
+      },
+      {
+        onDispose: async () => {
+          throw new Error('cleanup exploded')
+        },
+      },
+    )
+  const tool = getTool(ctx, registered)
+  await assert.rejects(
+    () =>
+      tool.execute(
+        { prompt: 'task', ...EXEC_MODEL },
+        { agent: { session: { id: 's1' } } },
+      ),
+    /executor 子代理清理失败.*cleanup exploded/,
+  )
 })
 
 test('stopReason=error 且 result.error.message 存在时原样拼入', async () => {
   const { ctx, registered } = makeCtx()
-  ctx.subagents.start = async () => ({
-    id: 'exec-session-fail-2',
-    result: Promise.resolve({
+  ctx.subagents.start = async () =>
+    makeRun('exec-session-fail-2', {
       stopReason: 'error',
       output: [],
       error: {
         message: 'dsh-miopiik-model-auth: 请求未授权模型 opencode-go/hy3（…）',
       },
-    }),
-  })
+    })
   apply(ctx)
   const tool = registered.find((t) => t.name === 'mop_spawn_executor')
   const out = await tool.execute(
