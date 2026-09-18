@@ -6,7 +6,7 @@ import { join } from 'node:path'
 const ROOT = join(import.meta.dirname, '..')
 const META = join(ROOT, 'packages', 'dsh-miopiik')
 
-const SUITE = [
+const RUNTIME_SUITE = [
   'dsh-miopiik-tool-recovery',
   'dsh-miopiik-executor',
   'dsh-miopiik-magic-keywords',
@@ -15,8 +15,11 @@ const SUITE = [
   'dsh-miopiik-learn',
   'dsh-miopiik-run-stats',
   'dsh-miopiik-recall',
-  'dsh-miopiik-checkpoint',
 ]
+
+// 0.2 transition: checkpoint remains an installed compatibility package for
+// one migration window, but the default runtime no longer mounts its row.
+const PACKAGE_DEPS = [...RUNTIME_SUITE, 'dsh-miopiik-checkpoint']
 
 function walk(dir) {
   const out = []
@@ -28,9 +31,9 @@ function walk(dir) {
   return out
 }
 
-test('meta patch inserts exactly the nine suite rows', () => {
+test('meta patch inserts exactly the eight 0.2 runtime rows', () => {
   const yaml = readFileSync(join(META, 'cordis.patch.yml'), 'utf8')
-  for (const name of SUITE) {
+  for (const name of RUNTIME_SUITE) {
     assert.match(
       yaml,
       new RegExp(`- id: ${name}\\n\\s+name: ${name}`),
@@ -38,14 +41,14 @@ test('meta patch inserts exactly the nine suite rows', () => {
     )
   }
   const inserted = [...yaml.matchAll(/- id:\s*(\S+)/g)].map((m) => m[1])
-  assert.deepEqual(inserted.sort(), [...SUITE].sort())
+  assert.deepEqual(inserted.sort(), [...RUNTIME_SUITE].sort())
 })
 
-test('meta dependencies pin the nine packages at the suite version', () => {
+test('meta dependencies retain the checkpoint compatibility package', () => {
   const pkg = JSON.parse(readFileSync(join(META, 'package.json'), 'utf8'))
   const deps = Object.keys(pkg.dependencies || {})
-  assert.deepEqual(deps.sort(), [...SUITE].sort())
-  for (const name of SUITE) {
+  assert.deepEqual(deps.sort(), [...PACKAGE_DEPS].sort())
+  for (const name of PACKAGE_DEPS) {
     assert.equal(pkg.dependencies[name], `^${pkg.version}`)
   }
   // npx 按包名解析：必须存在与包同名的 bin，否则 `npx dsh-miopiik` 会 404。
