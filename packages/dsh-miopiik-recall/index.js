@@ -51,6 +51,85 @@ const stringOutput = {
   render: (_args, value) => [{ type: 'text', text: value }],
 }
 
+const MESSAGE_EVENT_TYPES = ['user/message', 'assistant/message']
+
+function normalizeSessionId(id) {
+  return String(id || '').replace(/^session-/, '')
+}
+
+function currentSessionId(session, header) {
+  return (
+    (header && (header.id || header.sessionId)) ||
+    (session && session.id) ||
+    ''
+  )
+}
+
+function formatHit(hit, lineChars) {
+  const time =
+    hit.time === undefined || hit.time === null
+      ? '?'
+      : new Date(hit.time).toISOString()
+  const role = hit.type === 'user/message' ? 'USER' : 'ASSISTANT'
+  const text = String(hit.text || '').replace(/\s+/g, ' ').trim()
+  return `[${time}] ${normalizeSessionId(hit.sessionId)} ${role}: ${text.slice(
+    0,
+    lineChars,
+  )}`
+}
+
+async function nativeRecall(ctx, { query, scope, cwd, sessionId, limit, lineChars, signal }) {
+  if (typeof ctx.get !== 'function') return null
+  const sessionQuery = ctx.get('sessionQuery')
+  if (
+    !sessionQuery ||
+    typeof sessionQuery.filterSessions !== 'function' ||
+    typeof sessionQuery.filterEvents !== 'function'
+  ) {
+    return null
+  }
+
+  const eventFilters = [
+    { kind: 'type', values: MESSAGE_EVENT_TYPES },
+    { kind: 'text', text: query },
+  ]
+  const targets =
+    scope === 'session'
+      ? [{ header: { id: sessionId } }]
+      : await sessionQuery.filterSessions(
+          [{ kind: 'cwd', values: [cwd] }],
+          signal,
+        )
+
+  const out = []
+  let matched = 0
+  let scanned = 0
+  for (const target of targets) {
+    signal?.throwIfAborted?.()
+    const id =
+      target &&
+      target.header &&
+      (target.header.id || target.header.sessionId)
+    if (!id) continue
+    scanned += 1
+    const hits = await sessionQuery.filterEvents(id, eventFilters)
+    for (const hit of hits) {
+      if (matched >= limit) break
+      out.push(formatHit(hit, lineChars))
+      matched += 1
+    }
+    if (matched >= limit) break
+  }
+
+  return {
+    scanned,
+    matched,
+    lines: out,
+    truncated: matched >= limit,
+    backend: 'sessionQuery',
+  }
+}
+
 export function apply(ctx, config = {}) {
   const zstdBin = config.zstdBin ?? 'zstd'
   const sessionsRoot =
@@ -157,7 +236,7 @@ export function apply(ctx, config = {}) {
     defineTool({
       name: 'mop_recall',
       description:
-        'Recall：查找本会话（scope="session"）或本工作目录全部历史会话（scope="workspace"，默认）中，所有 user/assistant 消息文本包含 query 的行。数据源为 ~/.dsh/sessions 下的会话日志（.jsonl.zstd，经 zstd 解压）。用于追溯之前回合说过/写过的内容：契约、数字结论、已做的决定、步骤号等。返回命中的消息行（时间 + 会话 id + 角色 + 文本，行内截断），并汇总扫描/命中统计。',
+        'Recall：查找本会话（scope="session"）或本工作目录全部历史会话（scope="workspace"，默认）中，所有 user/assistant 消息文本包含 query 的行。0.2 默认优先使用 DSH 原生 sessionQuery 逻辑会话语料库（不依赖私有日志布局）；caseSensitive=true、原生 seam 缺失或原生读取失败时保留旧 zstd 日志扫描兼容路径。用于追溯之前回合说过/写过的内容：契约、数字结论、已做的决定、步骤号等。返回命中的消息行（时间 + 会话 id + 角色 + 文本，行内截断），并汇总扫描/命中统计。',
       parameters: {
         query: {
           type: 'string',
@@ -194,17 +273,50 @@ export function apply(ctx, config = {}) {
         const cwdDir = join(sessionsRoot, slugOf(cwd))
         const limit = args.maxLines ?? maxLines
         const scope = args.scope === 'session' ? 'session' : 'workspace'
+        const currentId = currentSessionId(session, header)
+
+        // 0.2 native-first：DSH sessionQuery 的 provider-independent filter*
+        // 读取完整逻辑语料库，不依赖 ~/.dsh/sessions 私有布局，也不要求 FTS
+        // openAt。其 text filter 固定大小写不敏感，因此 caseSensitive=true
+        // 明确保留旧 scanner 语义。
+        if (lower) {
+          try {
+            const native = await nativeRecall(ctx, {
+              query,
+              scope,
+              cwd,
+              sessionId: currentId,
+              limit,
+              lineChars,
+              signal: exec && exec.signal,
+            })
+            if (native) {
+              const headerOut = [
+                `recall "${query}" (scope=${scope}, cwd=${cwd}, caseSensitive=false)`,
+                `scanned=${native.scanned}, matched=${native.matched}, skipped=0, sources=${native.backend}`,
+              ]
+              if (native.matched === 0) {
+                headerOut.push('(no hits)')
+                return headerOut.join('\n')
+              }
+              if (native.truncated)
+                headerOut.push(`(truncated at ${limit} lines)`)
+              return [...headerOut, ...native.lines].join('\n')
+            }
+          } catch (error) {
+            if (exec && exec.signal && exec.signal.aborted) throw error
+            // 兼容优先：native seam 在旧部署缺失/临时不可用时继续走 0.1.x
+            // zstd scanner；不要让存量安装因上游 sessionQuery 漂移直接失效。
+          }
+        }
 
         const files = await sessionFiles(cwdDir)
         // id 归一化：目录名 session-<uuid> 解析出的 sessionId 已去前缀，
         // 而 header.id/session.id 常为带 'session-' 前缀的完整 SessionId——
         // 严格相等会永不命中（0.1.9 验收 R4c：scope=session 恒空）。
-        const normId = (id) => String(id || '').replace(/^session-/, '')
-        const currentId =
-          (header && (header.id || header.sessionId)) || (session && session.id)
         const targets =
           scope === 'session'
-            ? files.filter((f) => f.sessionId === normId(currentId))
+            ? files.filter((f) => f.sessionId === normalizeSessionId(currentId))
             : files
 
         let matched = 0
