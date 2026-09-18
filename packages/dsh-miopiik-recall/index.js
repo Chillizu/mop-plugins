@@ -59,9 +59,7 @@ function normalizeSessionId(id) {
 
 function currentSessionId(session, header) {
   return (
-    (header && (header.id || header.sessionId)) ||
-    (session && session.id) ||
-    ''
+    (header && (header.id || header.sessionId)) || (session && session.id) || ''
   )
 }
 
@@ -71,14 +69,19 @@ function formatHit(hit, lineChars) {
       ? '?'
       : new Date(hit.time).toISOString()
   const role = hit.type === 'user/message' ? 'USER' : 'ASSISTANT'
-  const text = String(hit.text || '').replace(/\s+/g, ' ').trim()
+  const text = String(hit.text || '')
+    .replace(/\s+/g, ' ')
+    .trim()
   return `[${time}] ${normalizeSessionId(hit.sessionId)} ${role}: ${text.slice(
     0,
     lineChars,
   )}`
 }
 
-async function nativeRecall(ctx, { query, scope, cwd, sessionId, limit, lineChars, signal }) {
+async function nativeRecall(
+  ctx,
+  { query, scope, cwd, sessionId, limit, lineChars, signal },
+) {
   if (typeof ctx.get !== 'function') return null
   const sessionQuery = ctx.get('sessionQuery')
   if (
@@ -107,9 +110,7 @@ async function nativeRecall(ctx, { query, scope, cwd, sessionId, limit, lineChar
   for (const target of targets) {
     signal?.throwIfAborted?.()
     const id =
-      target &&
-      target.header &&
-      (target.header.id || target.header.sessionId)
+      target && target.header && (target.header.id || target.header.sessionId)
     if (!id) continue
     scanned += 1
     const hits = await sessionQuery.filterEvents(id, eventFilters)
