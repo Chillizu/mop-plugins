@@ -101,7 +101,7 @@ DSH 兼容矩阵见 [`docs/design/dsh-compat.md`](docs/design/dsh-compat.md)。
 
 ## 插件清单（9 插件 + 1 套件包）
 
-> 下表保留 **0.1.x 已发布包的兼容清单**。0.2 默认装配已开始收敛：自动 checkpoint 由 `dsh-miopiik-tool-recovery` 承担；capabilities + run-stats 的实现由新 `dsh-miopiik-diagnostics` 统一拥有。三个旧包仍保留为可安装兼容入口，但不再由默认 meta/preset 挂载。
+> 下表保留 **0.1.x 已发布包的兼容清单**。0.2 默认装配已开始收敛：自动 checkpoint 由 `dsh-miopiik-tool-recovery` 承担；capabilities + run-stats 的实现由新 `dsh-miopiik-diagnostics` 统一拥有。三个旧包仍保留为可安装兼容入口，但不再由默认 meta/preset 挂载。 `dsh-miopiik-magic-keywords` 与 `dsh-miopiik-learn` 也从 0.2 默认面退出，改为显式 opt-in。
 
 | 包                                                                   | 类型     | 工具 / 行为                                                                                                                                                                                                                                                                     |
 | -------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -133,7 +133,7 @@ DSH 兼容矩阵见 [`docs/design/dsh-compat.md`](docs/design/dsh-compat.md)。
 ### 方式一（推荐）：套件包一条命令
 
 ```bash
-# 插件层：一条命令安装套件；当前 0.2 收敛分支默认运行时挂载 7 行，兼容包仍随依赖保留但不再单独挂载
+# 插件层：一条命令安装套件；当前 0.2 收敛分支默认运行时挂载 5 行，兼容/可选包仍随依赖保留但不再单独挂载
 dsh plugin --profile web add dsh-miopiik
 
 # preset 层（完整四层工作流需要）：初始化 miopiik preset 到 ${DSH_HOME}/.agent-presets/miopiik
@@ -150,15 +150,15 @@ npx dsh-miopiik               # 目标已存在则拒绝覆盖；--force 覆盖�
 dsh plugin --profile web add \
   dsh-miopiik-tool-recovery \
   dsh-miopiik-executor \
-  dsh-miopiik-magic-keywords \
   dsh-miopiik-model-auth \
   dsh-miopiik-diagnostics \
-  dsh-miopiik-learn \
   dsh-miopiik-recall
 
 # 0.2: do not also add dsh-miopiik-checkpoint with tool-recovery.
 # The old package is compatibility-only; mounting both would duplicate auto-checkpoint events.
 # Likewise, do not add capabilities/run-stats alongside diagnostics in the default 0.2 profile; the old packages are standalone compatibility entries.
+# Optional legacy/workflow helpers are explicit opt-in:
+# dsh-miopiik-magic-keywords / dsh-miopiik-learn
 ```
 
 需要完整四层工作流时再装 preset（脱敏模板在本仓库 `examples/miopiik/`）：
@@ -176,10 +176,8 @@ git clone https://github.com/Chillizu/mop-plugins && cd mop-plugins
 dsh plugin --profile web add \
   link:./packages/dsh-miopiik-tool-recovery \
   link:./packages/dsh-miopiik-executor \
-  link:./packages/dsh-miopiik-magic-keywords \
   link:./packages/dsh-miopiik-model-auth \
   link:./packages/dsh-miopiik-diagnostics \
-  link:./packages/dsh-miopiik-learn \
   link:./packages/dsh-miopiik-recall
 ```
 
