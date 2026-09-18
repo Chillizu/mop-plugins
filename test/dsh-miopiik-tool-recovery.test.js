@@ -76,7 +76,6 @@ test('apply registers the seven recovery tools', () => {
   ])
 })
 
-
 function makeAutoCheckpointCtx() {
   const state = { content: '', version: 0, writeCalls: 0 }
   const fs = {
@@ -127,7 +126,6 @@ test('recovery auto-checkpoint deduplicates repeated turn-stopping', async () =>
   assert.equal(state.writeCalls, 1)
   assert.match(state.content, /user: \(no user text\)/)
 })
-
 
 test('recovery auto-checkpoint dedupe is session-scoped', async () => {
   const { listeners, state } = makeAutoCheckpointCtx()
