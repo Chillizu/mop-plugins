@@ -6,11 +6,7 @@ const { apply } = await import('../packages/dsh-miopiik-executor/index.js')
 // 新契约下任何 spawn 都应显式带 model+provider（零默认零兜底）。
 const EXEC_MODEL = { model: 'mimo-v2.5', provider: 'opencode-go' }
 
-function makeRun(
-  id,
-  result,
-  { onDispose = async () => {} } = {},
-) {
+function makeRun(id, result, { onDispose = async () => {} } = {}) {
   return {
     id,
     result: Promise.resolve(result),
