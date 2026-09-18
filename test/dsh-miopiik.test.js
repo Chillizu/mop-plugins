@@ -11,15 +11,19 @@ const RUNTIME_SUITE = [
   'dsh-miopiik-executor',
   'dsh-miopiik-magic-keywords',
   'dsh-miopiik-model-auth',
-  'dsh-miopiik-capabilities',
+  'dsh-miopiik-diagnostics',
   'dsh-miopiik-learn',
-  'dsh-miopiik-run-stats',
   'dsh-miopiik-recall',
 ]
 
 // 0.2 transition: checkpoint remains an installed compatibility package for
 // one migration window, but the default runtime no longer mounts its row.
-const PACKAGE_DEPS = [...RUNTIME_SUITE, 'dsh-miopiik-checkpoint']
+const PACKAGE_DEPS = [
+  ...RUNTIME_SUITE,
+  'dsh-miopiik-checkpoint',
+  'dsh-miopiik-capabilities',
+  'dsh-miopiik-run-stats',
+]
 
 function walk(dir) {
   const out = []
@@ -31,7 +35,7 @@ function walk(dir) {
   return out
 }
 
-test('meta patch inserts exactly the eight 0.2 runtime rows', () => {
+test('meta patch inserts exactly the seven 0.2 runtime rows', () => {
   const yaml = readFileSync(join(META, 'cordis.patch.yml'), 'utf8')
   for (const name of RUNTIME_SUITE) {
     assert.match(
@@ -44,7 +48,7 @@ test('meta patch inserts exactly the eight 0.2 runtime rows', () => {
   assert.deepEqual(inserted.sort(), [...RUNTIME_SUITE].sort())
 })
 
-test('meta dependencies retain the checkpoint compatibility package', () => {
+test('meta dependencies retain the 0.2 compatibility packages', () => {
   const pkg = JSON.parse(readFileSync(join(META, 'package.json'), 'utf8'))
   const deps = Object.keys(pkg.dependencies || {})
   assert.deepEqual(deps.sort(), [...PACKAGE_DEPS].sort())
@@ -55,10 +59,13 @@ test('meta dependencies retain the checkpoint compatibility package', () => {
   assert.ok(pkg.bin && typeof pkg.bin['dsh-miopiik'] === 'string')
 })
 
-test('0.2 preset mounts recovery but not the standalone checkpoint compatibility row', () => {
+test('0.2 preset mounts converged domains, not compatibility rows', () => {
   const yaml = readFileSync(join(META, 'preset', 'agent.cordis.yml'), 'utf8')
   assert.match(yaml, /- id: dsh-miopiik-tool-recovery\b/)
+  assert.match(yaml, /- id: dsh-miopiik-diagnostics\b/)
   assert.doesNotMatch(yaml, /- id: dsh-miopiik-checkpoint\b/)
+  assert.doesNotMatch(yaml, /- id: dsh-miopiik-capabilities\b/)
+  assert.doesNotMatch(yaml, /- id: dsh-miopiik-run-stats\b/)
 })
 
 test('bundled preset stays byte-identical to examples/miopiik', () => {
