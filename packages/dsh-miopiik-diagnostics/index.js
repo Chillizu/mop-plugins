@@ -311,7 +311,6 @@ export function applyCapabilities(ctx) {
   )
 }
 
-
 export function applyRunStats(ctx) {
   ctx.tools.register(
     defineTool({
@@ -413,7 +412,6 @@ export function applyRunStats(ctx) {
     }),
   )
 }
-
 
 export function apply(ctx) {
   applyCapabilities(ctx)
