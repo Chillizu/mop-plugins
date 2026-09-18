@@ -47,7 +47,7 @@
 | D34 | 监督层红队 benchmark（类型：实验提案；状态：设计已定，待跑，D29v3 fallback 阶梯末级）——对监督层直接喂对抗生成坏活，测能力级判别力，解耦执行层 base rate；与系统级 H2（D29v3）分开，单独预注册 | [d29v3-experiment-design](docs/design/d29v3-experiment-design.md) §2 |
 | D35 | 派发分流硬规则（类型：过程原则；状态：已定；证据：A/B 基准 mdtodo 导出复盘）——原「评测/对比等可控场景禁派发」豁免被模型援引跳过整条流水线（miopiik 会话 6e010d8f 全程单机执行，0 次派发/0 次 ask_user_question）。收窄为：禁派发豁免**仅限不产出工件的纯问答/诊断/检索讨论**；实现类任务无论大小一律走规划层→执行层；授权闸与 D33 模型确认合并为同一次 `ask_user_question`；任务书声明全自动时视为预授权 | [agent.cordis.yml](examples/miopiik/agent.cordis.yml) 硬规则1 + 任务分配 |
 | D36 | 层级拓扑与深度预算（类型：设计；状态：已定；证据：ench1 复盘——maxDepth 写死 1 使规划层(depth1)派执行器必然 SubagentDepthError，三层退两层）——四层架构树 = 审查(0)→规划(1)→{执行×N，监督}(2)，depth 2 为叶子不再派发；极端第 3 层须用户经授权闸明示同意，默认横向加派不纵向加深。机制面：`mop_spawn_executor` maxDepth 改为调用者深度+1 相对浮动；能力清单头部新增「本会话层级」行供各层自查；审查/规划 persona 固化层级纪律 | [phase1-runbook](docs/design/phase1-runbook.md) §3.1 |
-| D37 | 生命周期与 0.2 收敛边界（类型：架构/维护；状态：已定；证据：上游能力对照 + 公开分发维护成本）——`0.1.x` 冻结为稳定 DSH 兼容维护线，不再新增独立插件；`0.2.x` 收敛为 recovery / policy / diagnostics 三领域 + `dsh-miopiik` 入口。checkpoint→recovery，capabilities+run-stats→diagnostics；executor/recall 转兼容路径并优先复用 DSH 原生 subagent/session-query；learn/magic-keywords 退出未来默认套件前保留 opt-in。已发布 npm 包不做大爆炸移除，至少跨一个 minor 提供 shim/迁移说明 | [LIFECYCLE](../LIFECYCLE.md) |
+| D37 | 生命周期与 0.2 收敛边界（类型：架构/维护；状态：已定；证据：上游能力对照 + 公开分发维护成本）——`0.1.x` 冻结为稳定 DSH 兼容维护线，不再新增独立插件；`0.2.x` 收敛为 recovery / policy / diagnostics 三领域 + `dsh-miopiik` 入口。checkpoint→recovery，capabilities+run-stats→diagnostics；executor/recall 转兼容路径并优先复用 DSH 原生 subagent/session-query；learn/magic-keywords 退出未来默认套件前保留 opt-in。已发布 npm 包不做大爆炸移除，至少跨一个 minor 提供 shim/迁移说明 | [LIFECYCLE](LIFECYCLE.md) |
 
 ## 3. 计划树索引
 
