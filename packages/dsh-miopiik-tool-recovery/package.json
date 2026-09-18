@@ -1,6 +1,6 @@
 {
   "name": "dsh-miopiik-tool-recovery",
-  "description": "Checkpoint / rewind / prune recovery toolkit over .dsh/memory/checkpoints.md. 基于检查点文件的恢复工具包（checkpoint / rewind / prune）",
+  "description": "Checkpoint / auto-checkpoint / rewind / prune recovery toolkit over .dsh/memory/checkpoints.md. 恢复工具包（手动与事件驱动 checkpoint / rewind / prune）",
   "version": "0.1.13",
   "type": "module",
   "main": "index.js",
