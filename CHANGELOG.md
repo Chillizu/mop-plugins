@@ -10,6 +10,7 @@
 - 0.1.x enters maintenance mode: security, upstream compatibility, correctness and documentation only; no new feature package is planned for this line.
 - Added the 0.2 transition contract: retain the published packages for compatibility while converging long-term ownership on recovery, policy and diagnostics; executor/recall/learn move toward native DSH capabilities and magic-keywords becomes optional legacy functionality.
 - No runtime bundle membership changes are made by this maintenance step.
+- **0.2 recovery migration (implementation branch):** `dsh-miopiik-tool-recovery` now owns event-driven `auto-turn` / `auto-error` persistence in addition to manual checkpoint/rewind/prune. The default preset stops mounting `dsh-miopiik-checkpoint`; the old package remains published/installable as a compatibility surface and stays a meta-package dependency for one migration window.
 
 ## [0.1.13] - 2026-08-28
 

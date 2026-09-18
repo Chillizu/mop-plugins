@@ -1,4 +1,4 @@
-# MiOpIIk 套件聚合 patch：一条 `dsh plugin add dsh-miopiik` 插入全部 9 行。
+# MiOpIIk 套件聚合 patch：一条 `dsh plugin add dsh-miopiik` 插入 8 个运行时行（0.2 recovery 已吸收 auto-checkpoint）。
 # 注意：勿与逐包安装（单独 add dsh-miopiik-*）混用同一 profile——重复 insert
 # 同名行属于未定义组合，二选一。
 - insert:
@@ -18,5 +18,3 @@
       name: dsh-miopiik-run-stats
     - id: dsh-miopiik-recall
       name: dsh-miopiik-recall
-    - id: dsh-miopiik-checkpoint
-      name: dsh-miopiik-checkpoint

@@ -1,6 +1,6 @@
 {
   "name": "dsh-miopiik-checkpoint",
-  "description": "MiOpIIk 里程碑自动检查点：根会话每轮关闭时自动把一行恢复点追加到 .dsh/memory/checkpoints.md，由 agent/turn-stopping 结构事件驱动，不依赖会话自觉",
+  "description": "Compatibility auto-checkpoint plugin for MiOpIIk 0.1.x-style installs; MiOpIIk 0.2 default runtime moves this behavior into dsh-miopiik-tool-recovery. 兼容包：0.2 默认由 recovery 承担自动检查点",
   "version": "0.1.13",
   "type": "module",
   "main": "index.js",

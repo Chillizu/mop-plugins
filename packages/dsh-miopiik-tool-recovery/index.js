@@ -22,6 +22,111 @@ const CHECKPOINT_LINE =
 // checkpoint 落点（D13，docs/design/recovery-toolkit.md）：项目 .dsh/memory/checkpoints.md，同包内写/读三处必须同一路径。
 const CHECKPOINTS_REL_PATH = '.dsh/memory/checkpoints.md'
 
+const AUTO_SUMMARY_CHARS = 120
+
+function textOfAutoBlock(block) {
+  if (!block || typeof block !== 'object') return ''
+  return block.type === 'text' ? block.text || '' : ''
+}
+
+function autoMessageText(content) {
+  if (Array.isArray(content)) return content.map(textOfAutoBlock).join('')
+  if (
+    content &&
+    typeof content === 'object' &&
+    typeof content.text === 'string'
+  )
+    return content.text
+  return ''
+}
+
+/**
+ * Structural auto-checkpoints live in the recovery domain in 0.2.
+ *
+ * They deliberately keep the 0.1.13 wire format (auto-turn / auto-error rows)
+ * so existing checkpoint files remain readable. Named rewind checkpoints keep
+ * their separate current-format rows and parser contract below.
+ */
+function installAutoCheckpoint(ctx, fs, sandboxPolicy) {
+  const writtenTurns = new Set()
+  const claimedByTurn = new Map()
+  const erroredTurns = new Set()
+
+  function rootOf(agent) {
+    if (!agent || !agent.session) return null
+    const session = agent.session
+    const header = session.header || session
+    if ((header.delegationDepth ?? 0) !== 0) return null
+    return {
+      id: header.id || header.sessionId || session.id || '',
+      cwd: header.cwd || session.cwd || '',
+    }
+  }
+
+  async function appendAutoLine(agent, line, signal) {
+    const root = rootOf(agent)
+    if (!root || !root.cwd) return
+    try {
+      const target = await fs.resolve(CHECKPOINTS_REL_PATH, { cwd: root.cwd })
+      const policy = sandboxPolicy.resolve({ session: agent.session })
+      await appendCheckpoint(fs, target, line + '\n', signal, policy)
+    } catch (error) {
+      // Auto-checkpointing is recovery telemetry: never make turn shutdown fail
+      // because the recovery line could not be persisted.
+      console.warn(
+        `[dsh-miopiik-tool-recovery] auto-checkpoint append failed: ${
+          (error && error.message) || error
+        }`,
+      )
+    }
+  }
+
+  ctx.on('agent/inbox/claimed', ({ agent, message, turn }) => {
+    const root = rootOf(agent)
+    if (!root) return
+    const key = `${root.id}\u0000${turn}`
+    const text = autoMessageText(message && message.content)
+      .replace(/\s+/g, ' ')
+      .trim()
+    if (text) claimedByTurn.set(key, text)
+  })
+
+  ctx.on('agent/turn-stopping', async ({ agent, turn, signal }) => {
+    const root = rootOf(agent)
+    if (!root) return
+    const key = `${root.id}\u0000${turn}`
+    if (writtenTurns.has(key)) return
+    writtenTurns.add(key)
+    const user = (claimedByTurn.get(key) || '').slice(0, AUTO_SUMMARY_CHARS)
+    const line = [
+      `- [${new Date().toISOString()}] auto-turn`,
+      `session=${root.id}`,
+      `turn=${turn}`,
+      `user: ${user || '(no user text)'}`,
+    ].join(' | ')
+    await appendAutoLine(agent, line, signal)
+  })
+
+  ctx.on('agent/error', async ({ agent, turn, error, signal }) => {
+    const root = rootOf(agent)
+    if (!root) return
+    const key = `${root.id}\u0000${turn}`
+    if (erroredTurns.has(key)) return
+    erroredTurns.add(key)
+    const detail = String((error && error.message) || error)
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, AUTO_SUMMARY_CHARS)
+    const line = [
+      `- [${new Date().toISOString()}] auto-error`,
+      `session=${root.id}`,
+      `turn=${turn}`,
+      detail || '(no detail)',
+    ].join(' | ')
+    await appendAutoLine(agent, line, signal)
+  })
+}
+
 /** 构造一条 checkpoint 行；与 {@link parseCheckpointLine} 互为 round-trip 契约。 */
 export function formatCheckpointLine(label, sid, boundary, note) {
   const time = new Date().toISOString()
@@ -159,6 +264,7 @@ async function pruneWithRetry(fs, target, keep, signal, policy) {
 
 export function apply(ctx) {
   const { tools, fs, sandboxPolicy, sessions, sessionPersistence } = ctx
+  installAutoCheckpoint(ctx, fs, sandboxPolicy)
   // sessionId -> { disposer, text }；规则状态按会话隔离，避免多会话互相覆盖。
   const ruleState = new Map()
 

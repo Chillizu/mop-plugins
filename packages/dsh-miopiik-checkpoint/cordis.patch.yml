@@ -1,5 +1,7 @@
-# dsh-miopiik-checkpoint 单包 patch：`dsh plugin add dsh-miopiik-checkpoint` 插入本行。
-# 套件安装（dsh-miopiik 聚合 patch 已含 checkpoint 行）无需此文件；提供它是为逐包安装路径一致。
+# dsh-miopiik-checkpoint compatibility patch.
+# 0.2 default dsh-miopiik no longer mounts this row because
+# dsh-miopiik-tool-recovery owns auto-turn / auto-error. Keep this package
+# individually installable for 0.1.x-style deployments during the migration window.
 - insert:
     - id: dsh-miopiik-checkpoint
       name: dsh-miopiik-checkpoint

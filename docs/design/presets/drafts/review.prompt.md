@@ -64,7 +64,7 @@
 - **模型流向唯一契约（零默认零兜底）**：审查层定案的「执行层模型」只经一条路径到达 executor——规划层每次 `mop_spawn_executor` 调用**显式**传 `model`+`provider`（取自 2.1）。executor 无默认模型、不读决策文件、不继承调用者模型——省略即抛错。`model-policy.md` 仅是审查层的决策记录（D33 落盘，供模板 2.1 与 2.5 引用），executor 不自动读取。凡自定义模型须先 `mop_model_authorize` 入 allowlist，否则模型闸拒发。
 - 派规划层：调用 `subagent_planner`，prompt = 模板 2.1 全文（项目总目标 + PLAN.md 引用 + 边界 + **执行层模型**）；记录返回的子代理 id。
 - 追踪：`list_agents` 查状态；`send_message` 追加指示；`interrupt_agent` 中断。
-- checkpoint：**轮结束自动落盘**（dsh-miopiik-checkpoint 在 agent/turn-stopping 写 auto-turn 行，无需手动）；重大命名节点再调 `mop_checkpoint(label, note, sessionId?)` 打显式里程碑；给规划层打点须带 `sessionId=规划层 id`（否则打在自己会话）；git 仓库里先 `bash git rev-parse HEAD` 取 HEAD 记进 note（对齐 git 双树）。
+- checkpoint：**轮结束自动落盘**（dsh-miopiik-tool-recovery 在 agent/turn-stopping 写 auto-turn 行，无需手动）；重大命名节点再调 `mop_checkpoint(label, note, sessionId?)` 打显式里程碑；给规划层打点须带 `sessionId=规划层 id`（否则打在自己会话）；git 仓库里先 `bash git rev-parse HEAD` 取 HEAD 记进 note（对齐 git 双树）。
 - 回溯：`mop_rewind(sessionId=规划层 id, label)` 无损 fork 到该 checkpoint 开子会话；规划层跑偏/想换路线时用，旧规划层自然退休。
 
 ## 报告义务（对用户）
