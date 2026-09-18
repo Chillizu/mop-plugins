@@ -98,9 +98,7 @@ function claimed(agentValue, turn, text) {
   return {
     agent: agentValue,
     turn,
-    message: text
-      ? { content: [{ type: 'text', text }] }
-      : { content: [] },
+    message: text ? { content: [{ type: 'text', text }] } : { content: [] },
   }
 }
 
