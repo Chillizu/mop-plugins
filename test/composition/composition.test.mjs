@@ -145,7 +145,7 @@ test('run-stats: real Loader 挂载 + tokenUsage 投影零桶锚', async () => {
   }
 })
 
-test('MiOpIIk 层挂载 smoke：0.2 domains + planner/supervisor delegation 经真实 Loader 可挂载', async () => {
+test('MiOpIIk 层挂载 smoke：0.2 default domains + planner/supervisor delegation 经真实 Loader 可挂载', async () => {
   // 证明 MiOpIIk 0.2 默认层（收敛域 + planner/supervisor 层派发行）的 inject 联合被
   // 真实 DSH 服务满足、可整体挂载——而不只是各自 mock register。persona 行不在本
   // fixture（需 agent-scoped context），由真实 dsh 会话的 standingKeyFor 验证。
@@ -157,6 +157,7 @@ test('MiOpIIk 层挂载 smoke：0.2 domains + planner/supervisor delegation 经�
       'dsh-miopiik-diagnostics',
       'dsh-miopiik-executor',
       'dsh-miopiik-model-auth',
+      'dsh-miopiik-recall',
       'tool-subagent-planner',
       'tool-subagent-supervisor',
     ]) {

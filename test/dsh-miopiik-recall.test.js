@@ -51,6 +51,195 @@ function makeCtx() {
   return { ctx, registered }
 }
 
+function makeNativeCtx({ sessions = [], eventsBySession = {} } = {}) {
+  const registered = []
+  const calls = { filterSessions: [], filterEvents: [] }
+  const sessionQuery = {
+    async filterSessions(filters, signal) {
+      calls.filterSessions.push({ filters, signal })
+      return sessions
+    },
+    async filterEvents(sessionId, filters) {
+      calls.filterEvents.push({ sessionId, filters })
+      return eventsBySession[sessionId] || []
+    },
+  }
+  const ctx = {
+    tools: { register: (t) => registered.push(t) },
+    get: (name) => (name === 'sessionQuery' ? sessionQuery : undefined),
+  }
+  return { ctx, registered, calls }
+}
+
+test('mop_recall 默认优先走 native sessionQuery workspace filters', async () => {
+  const { ctx, registered, calls } = makeNativeCtx({
+    sessions: [
+      { header: { id: 'session-native-a', cwd: CWD } },
+      { header: { id: 'session-native-b', cwd: CWD } },
+    ],
+    eventsBySession: {
+      'session-native-a': [
+        {
+          sessionId: 'session-native-a',
+          seq: 2,
+          type: 'user/message',
+          time: Date.parse('2026-08-01T00:00:00.000Z'),
+          text: 'portal native user hit',
+        },
+      ],
+      'session-native-b': [
+        {
+          sessionId: 'session-native-b',
+          seq: 4,
+          type: 'assistant/message',
+          time: Date.parse('2026-08-02T00:01:00.000Z'),
+          text: 'portal native assistant hit',
+        },
+      ],
+    },
+  })
+  apply(ctx, { sessionsRoot: '/path/that/does/not/exist' })
+  const tool = registered.find((x) => x.name === 'mop_recall')
+  const out = await tool.execute(
+    { query: 'portal', scope: 'workspace' },
+    {
+      agent: { session: { header: { id: 'session-current', cwd: CWD } } },
+      signal: new AbortController().signal,
+    },
+  )
+
+  assert.match(out, /sources=sessionQuery/)
+  assert.match(out, /scanned=2, matched=2, skipped=0/)
+  assert.match(out, /native-a USER: portal native user hit/)
+  assert.match(out, /native-b ASSISTANT: portal native assistant hit/)
+  assert.deepEqual(calls.filterSessions[0].filters, [
+    { kind: 'cwd', values: [CWD] },
+  ])
+  assert.equal(calls.filterEvents.length, 2)
+  for (const call of calls.filterEvents) {
+    assert.deepEqual(call.filters, [
+      {
+        kind: 'type',
+        values: ['user/message', 'assistant/message'],
+      },
+      { kind: 'text', text: 'portal' },
+    ])
+  }
+})
+
+test('mop_recall native scope=session 不枚举 workspace', async () => {
+  const { ctx, registered, calls } = makeNativeCtx({
+    eventsBySession: {
+      'session-current': [
+        {
+          sessionId: 'session-current',
+          seq: 1,
+          type: 'assistant/message',
+          time: Date.parse('2026-08-03T00:00:00.000Z'),
+          text: 'needle native current',
+        },
+      ],
+    },
+  })
+  apply(ctx)
+  const tool = registered.find((x) => x.name === 'mop_recall')
+  const out = await tool.execute(
+    { query: 'needle', scope: 'session' },
+    {
+      agent: { session: { header: { id: 'session-current', cwd: CWD } } },
+    },
+  )
+
+  assert.equal(calls.filterSessions.length, 0)
+  assert.equal(calls.filterEvents.length, 1)
+  assert.equal(calls.filterEvents[0].sessionId, 'session-current')
+  assert.match(out, /scanned=1, matched=1/)
+  assert.match(out, /current ASSISTANT: needle native current/)
+})
+
+test('mop_recall native maxLines 保持全局截断语义', async () => {
+  const { ctx, registered, calls } = makeNativeCtx({
+    sessions: [
+      { header: { id: 'session-a', cwd: CWD } },
+      { header: { id: 'session-b', cwd: CWD } },
+    ],
+    eventsBySession: {
+      'session-a': Array.from({ length: 4 }, (_, index) => ({
+        sessionId: 'session-a',
+        seq: index,
+        type: 'assistant/message',
+        time: Date.parse('2026-08-04T00:00:00.000Z') + index,
+        text: `needle native ${index}`,
+      })),
+      'session-b': [
+        {
+          sessionId: 'session-b',
+          seq: 0,
+          type: 'assistant/message',
+          time: Date.parse('2026-08-05T00:00:00.000Z'),
+          text: 'needle should not be reached',
+        },
+      ],
+    },
+  })
+  apply(ctx)
+  const tool = registered.find((x) => x.name === 'mop_recall')
+  const out = await tool.execute(
+    { query: 'needle', maxLines: 3 },
+    { agent: { session: { header: { cwd: CWD } } } },
+  )
+
+  assert.match(out, /matched=3/)
+  assert.match(out, /truncated at 3 lines/)
+  assert.equal(calls.filterEvents.length, 1)
+  assert.doesNotMatch(out, /should not be reached/)
+})
+
+test('mop_recall caseSensitive=true 明确绕过 native seam', async () => {
+  const { ctx, registered, calls } = makeNativeCtx({
+    sessions: [{ header: { id: 'session-native-a', cwd: CWD } }],
+  })
+  apply(ctx, { sessionsRoot: '/no/native-case-sensitive-logs' })
+  const tool = registered.find((x) => x.name === 'mop_recall')
+  const out = await tool.execute(
+    { query: 'PortalCase', caseSensitive: true },
+    { agent: { session: { header: { cwd: CWD } } } },
+  )
+
+  assert.equal(calls.filterSessions.length, 0)
+  assert.equal(calls.filterEvents.length, 0)
+  assert.match(out, /caseSensitive=true/)
+  assert.match(out, /\(no hits\)/)
+})
+
+test('mop_recall native seam 失败时回退 legacy scanner', async () => {
+  const registered = []
+  let nativeCalls = 0
+  const ctx = {
+    tools: { register: (tool) => registered.push(tool) },
+    get: (name) =>
+      name === 'sessionQuery'
+        ? {
+            filterSessions: async () => {
+              nativeCalls += 1
+              throw new Error('native seam unavailable')
+            },
+            filterEvents: async () => [],
+          }
+        : undefined,
+  }
+  apply(ctx, { sessionsRoot: '/no/fallback-logs' })
+  const tool = registered.find((x) => x.name === 'mop_recall')
+  const out = await tool.execute(
+    { query: 'fallback' },
+    { agent: { session: { header: { cwd: CWD } } } },
+  )
+
+  assert.equal(nativeCalls, 1)
+  assert.match(out, /sources=\/no\/fallback-logs/)
+  assert.match(out, /\(no hits\)/)
+})
+
 test('mop_recall 工作目录级命中并标注会话/角色/时间', async (t) => {
   if (!(await hasZstd())) return t.skip('zstd CLI 不可用')
   const root = await mkdtemp(join(tmpdir(), 'recall-'))

@@ -22,7 +22,7 @@
 | D9 | 监督报告 = `[EXEC]` 五字段（目标/做了什么/进展/交付物/下一步）；监督层默认不回复，仅偏离时 report concern | [report-template](docs/design/templates/report-template.md) |
 | D10 | 监督层可知性三通道：定期报告推送 + session_query 读日志 + `.dsh/progress/current.md` 落盘事实 | [通信协议](docs/design/communication-protocol.md) |
 | D11 | Subagent 授权闸：派发默认经用户确认，可放行，可场景级禁停（评测场景禁 subagent） | [architecture-3-layer](docs/design/architecture-3-layer.md) |
-| D12 | 记忆三级：全局记忆（用户偏好/系统信息/系统级改动）、项目记忆（进展/思路/长期需求）、recall（= DSH session_search 家族）；一期零新工具 | [memory-design](docs/design/memory-design.md) |
+| D12 | 记忆三级：全局记忆（用户偏好/系统信息/系统级改动）、项目记忆（进展/思路/长期需求）、recall（`mop_recall` 兼容工具；0.2 默认以 DSH `sessionQuery.filterSessions/filterEvents` 为数据面，旧 zstd scanner 仅 fallback） | [memory-design](docs/design/memory-design.md) |
 | D13 | 恢复工具包：`checkpoint` / `rewind`（fork 无损回溯，含冷会话）/ 规则注入；`/retry` **弃用**（请求级自动重试 = provider 原生 `llm/retry`）；run-stats = trajectory 原生 + `mop_run_stats` 可编程 token 出口（见 D18） | [recovery-toolkit](docs/design/recovery-toolkit.md) |
 | D14 | 恢复工具与会话管理（fork/rewind）UI 落位：Web GUI「轨迹」页面——**按钮方向已弃**（`sessions.fork`=新会话，做不出就地回退）；checkpoint/rewind 收为 agent 工具 | 同上 |
 | D15 | 魔法关键词：hook 检测 **ultrathink / workflowz**（正文散文）注入 notice；**orchestrate** 为规划层 persona 常驻契约段落（非 hook 触发） | [magic-keywords](docs/design/magic-keywords.md) |
