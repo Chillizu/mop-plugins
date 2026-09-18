@@ -81,6 +81,49 @@ function stripEmoji(s) {
   return String(s).replace(EMOJI_RE, '').replace(VARIATION_SELECTOR_RE, '')
 }
 
+function readableError(error, fallback) {
+  if (error && error.message) return error.message
+  const text = String(error)
+  return text === 'Error' ? fallback : text
+}
+
+async function withRunDisposal(run, operation) {
+  let value
+  let operationError
+  try {
+    value = await operation()
+  } catch (error) {
+    operationError = error
+  }
+
+  let disposalError
+  try {
+    if (!run || typeof run.dispose !== 'function') {
+      throw new Error('published SubagentRun is missing dispose()')
+    }
+    await run.dispose()
+  } catch (error) {
+    disposalError = error
+  }
+
+  if (operationError && disposalError) {
+    throw new AggregateError(
+      [operationError, disposalError],
+      `executor 子代理执行与清理均失败（子会话 ${run && run.id ? run.id : '?'}）`,
+    )
+  }
+  if (operationError) throw operationError
+  if (disposalError) {
+    throw new Error(
+      `executor 子代理清理失败（见子会话 ${run && run.id ? run.id : '?'}）: ${readableError(
+        disposalError,
+        '无错误详情',
+      )}`,
+    )
+  }
+  return value
+}
+
 export function apply(ctx, config = {}) {
   const maxOutputChars = config.maxOutputChars ?? DEFAULT_MAX_OUTPUT_CHARS
   const toolFilter =
@@ -221,12 +264,10 @@ export function apply(ctx, config = {}) {
             }
             // start 阶段失败（闸/发布/深度限制）：错误原因必须回传（0.1.9 验收 B1 复测：
             // 闸拒发生在 start 内部，reject error.message 常为空，空 [error] 不可接受）。
-            const msg =
-              error && error.message
-                ? error.message
-                : String(error) === 'Error'
-                  ? '(无错误详情；常见原因为模型闸拒绝、深度超限或工具面限制，见宿主日志)'
-                  : String(error)
+            const msg = readableError(
+              error,
+              '(无错误详情；常见原因为模型闸拒绝、深度超限或工具面限制，见宿主日志)',
+            )
             throw new Error(`executor 子代理启动失败: ${msg}`)
           }
 
@@ -234,8 +275,9 @@ export function apply(ctx, config = {}) {
           // 供审查层 mop_run_stats(sessionId) 采 token 四桶（之前只在截断 suffix 里，短输出拿不到）。
           const sessionTag = `\n[executor-session: ${run.id}]`
 
-          let result
-          try {
+          return await withRunDisposal(run, async () => {
+            let result
+            try {
             if (timeoutPromise !== null) {
               const raced = await Promise.race([
                 run.result,
@@ -255,13 +297,11 @@ export function apply(ctx, config = {}) {
             // 不能只存在于子会话日志（0.1.8 验收 B1：闸拒文案丢失，工具面只见空 [error]）。
             // Cordis start 的 reject error 常为空 message（闸文案写在子会话日志），
             // 故统一兜底为可读文案 + 暴露子会话 id 供查日志。
-            const msg =
-              error && error.message
-                ? error.message
-                : String(error) === 'Error'
-                  ? '(无错误详情；常见原因为模型闸拒绝或深度/工具限制，见宿主日志与子会话日志)'
-                  : String(error)
-            throw new Error(`executor 子代理失败（见子会话 ${run.id}）: ${msg}`)
+              const msg = readableError(
+                error,
+                '(无错误详情；常见原因为模型闸拒绝或深度/工具限制，见宿主日志与子会话日志)',
+              )
+              throw new Error(`executor 子代理失败（见子会话 ${run.id}）: ${msg}`)
           }
 
           // timer 已触发时优先报 timeout：provider 若正确桥接 abort，run.result 会
@@ -294,7 +334,8 @@ export function apply(ctx, config = {}) {
           const suffix = truncated
             ? `\n…[output truncated at ${maxOutputChars} chars; full text in executor subagent session ${run.id}]`
             : ''
-          return `[${result.stopReason}] ${shown}${suffix}${sessionTag}`
+            return `[${result.stopReason}] ${shown}${suffix}${sessionTag}`
+          })
         } finally {
           if (timer !== null) clearTimeout(timer)
           if (isSignal) sourceSignal.removeEventListener('abort', forward)
