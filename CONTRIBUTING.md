@@ -28,6 +28,8 @@
 
 ## 版本策略（lockstep）
 
+0.1.x 进入 maintenance-only：只接安全、上游兼容、正确性与文档修复，不新增 feature package。0.2 的收敛与 legacy package 迁移规则见 [docs/design/0.2-transition.md](docs/design/0.2-transition.md)。已发布包不通过 unpublish 做清理；默认 bundle 的移除属于 0.2 breaking 迁移，并须先有兼容路径与组合测试。
+
 9 个插件包 + 套件包 `dsh-miopiik` 同号同发：
 
 1. 发版前把全部 workspace `version` 改成同一号（meta 包依赖用 `^` range，无需逐包改）：

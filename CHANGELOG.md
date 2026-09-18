@@ -3,6 +3,14 @@
 所有对外可见的变更记录在本文件。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 SemVer，9 个插件包 + 套件包 `dsh-miopiik` 采用 **lockstep 版本**（同号同发）。
 
+## [Unreleased]
+
+### Changed
+
+- 0.1.x enters maintenance mode: security, upstream compatibility, correctness and documentation only; no new feature package is planned for this line.
+- Added the 0.2 transition contract: retain the published packages for compatibility while converging long-term ownership on recovery, policy and diagnostics; executor/recall/learn move toward native DSH capabilities and magic-keywords becomes optional legacy functionality.
+- No runtime bundle membership changes are made by this maintenance step.
+
 ## [0.1.13] - 2026-08-28
 
 ### Added

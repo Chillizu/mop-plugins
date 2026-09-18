@@ -1,7 +1,7 @@
 # DSH 兼容矩阵（mop-plugins）
 
 > 目的：把「插件 peer dependency 用 `*`」这一已知妥协，替换为**可核对的版本/commit 矩阵**。
-> DSH 官方仍处 developer preview（rc），seam 语义可能破坏性变动；本文件记录每个 seam
+> DSH 官方仍处 developer preview，seam 语义可能破坏性变动；本文件记录每个 seam
 > 的最低验证版本，配合 CI 的 pinned gate + master drift-warning leg 对抗漂移。
 
 ## 1. 已验证版本
@@ -24,6 +24,8 @@
 | dsh-miopiik-capabilities | tools, fs, sessions, sessionPersistence, sessionQuery, systemPrompt, sandboxPolicy | — | agent/created |
 | dsh-miopiik-learn | tools, fs, sandboxPolicy | — | — |
 | dsh-miopiik-run-stats | tools | sessions, sessionProjections, sessionProjectionCache | — |
+| dsh-miopiik-recall | tools | — | — |
+| dsh-miopiik-checkpoint | — | — | agent/inbox/claimed, agent/turn-stopping, agent/error |
 
 seam 联合：`tools / fs / sandboxPolicy / sessions / sessionPersistence / sessionQuery / systemPrompt / subagents`。
 这是 `test/composition/cordis.miopiik-example.yml` 挂载 smoke fixture 所需的最小服务集。
