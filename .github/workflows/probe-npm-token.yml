@@ -1,0 +1,35 @@
+name: Probe npm token location
+
+on:
+  push:
+    branches:
+      - release/0.2.0-publish-artifacts
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+      contents: read
+    steps:
+      - name: Probe without exposing values
+        id: probe
+        env:
+          SECRET_PRESENT: ${{ secrets.NPM_TOKEN != '' }}
+          VARIABLE_PRESENT: ${{ vars.NPM_TOKEN != '' }}
+        run: |
+          echo "secret_present=$SECRET_PRESENT" > /tmp/probe.txt
+          echo "variable_present=$VARIABLE_PRESENT" >> /tmp/probe.txt
+      - name: Report to PR 12
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "### npm token location probe"
+            echo
+            cat /tmp/probe.txt
+            echo
+            echo "No secret or variable value was printed."
+          } > /tmp/pr-comment.md
+          gh pr comment 12 --body-file /tmp/pr-comment.md
