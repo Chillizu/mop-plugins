@@ -1,7 +1,7 @@
 {
   "name": "dsh-miopiik-executor",
   "description": "MiOpIIk one-shot execution policy adapter over native DSH subagents: explicit zero-default routing, leaf depth, persona/tool scope, timeout/cancel and bounded result presentation. 原生 DSH subagent 上的执行策略适配层",
-  "version": "0.1.13",
+  "version": "0.2.0",
   "type": "module",
   "main": "index.js",
   "exports": {
