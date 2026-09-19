@@ -47,7 +47,7 @@ test('package-lock workspace versions and internal ranges match manifests', () =
     const rel = path
       .slice(ROOT.length + 1)
       .replace(/\/package\.json$/, '')
-      .replaceAll('\\\\', '/')
+      .replaceAll('\\', '/')
     const locked = lock.packages && lock.packages[rel]
     assert.ok(locked, `package-lock must contain workspace ${rel}`)
     assert.equal(locked.version, pkg.version, `${rel} lockfile version drifted`)
