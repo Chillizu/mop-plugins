@@ -1,0 +1,66 @@
+name: Publish npm 0.2.0
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  publish:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'release/0.2.0-publish-artifacts'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v0.2.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Verify npm authorization
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "::error::NPM_TOKEN is not available to this workflow"
+            exit 1
+          fi
+          npm whoami
+
+      - name: Verify tagged release source
+        run: |
+          set -euo pipefail
+          node -e "const p=require('./packages/dsh-miopiik/package.json'); if(p.version!=='0.2.0') throw new Error('tag is not 0.2.0')"
+
+      - name: Publish MiOpIIk 0.2.0 in dependency order
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          publish_one() {
+            pkg="$1"
+            dir="$2"
+            if npm view "$pkg@0.2.0" version >/dev/null 2>&1; then
+              echo "SKIP $pkg@0.2.0 already exists"
+              return 0
+            fi
+            echo "PUBLISH $pkg@0.2.0 from $dir"
+            (cd "$dir" && npm publish --access public)
+          }
+
+          publish_one dsh-miopiik-tool-recovery packages/dsh-miopiik-tool-recovery
+          publish_one dsh-miopiik-executor packages/dsh-miopiik-executor
+          publish_one dsh-miopiik-magic-keywords packages/dsh-miopiik-magic-keywords
+          publish_one dsh-miopiik-model-auth packages/dsh-miopiik-model-auth
+          publish_one dsh-miopiik-learn packages/dsh-miopiik-learn
+          publish_one dsh-miopiik-recall packages/dsh-miopiik-recall
+          publish_one dsh-miopiik-checkpoint packages/dsh-miopiik-checkpoint
+          publish_one dsh-miopiik-diagnostics packages/dsh-miopiik-diagnostics
+          publish_one dsh-miopiik-capabilities packages/dsh-miopiik-capabilities
+          publish_one dsh-miopiik-run-stats packages/dsh-miopiik-run-stats
+          publish_one dsh-miopiik packages/dsh-miopiik
