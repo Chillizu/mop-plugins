@@ -1,7 +1,7 @@
 {
   "name": "dsh-miopiik",
-  "description": "MiOpIIk plugin suite for DeepSeek Harness: one-command install of nine plugins plus the miopiik four-layer workflow preset initializer. MiOpIIk 套件包：一条命令装齐 9 插件并初始化四层工作流 preset",
-  "version": "0.1.13",
+  "description": "MiOpIIk 0.2 plugin suite for DeepSeek Harness: five default runtime domains over ten published compatibility/plugin packages plus the four-layer workflow preset initializer. MiOpIIk 0.2 套件：5 个默认运行时域，10 个公开兼容/插件包，附四层工作流 preset",
+  "version": "0.2.0",
   "type": "module",
   "license": "MIT",
   "engines": {
@@ -44,15 +44,15 @@
     }
   },
   "dependencies": {
-    "dsh-miopiik-capabilities": "^0.1.13",
-    "dsh-miopiik-checkpoint": "^0.1.13",
-    "dsh-miopiik-diagnostics": "^0.1.13",
-    "dsh-miopiik-executor": "^0.1.13",
-    "dsh-miopiik-learn": "^0.1.13",
-    "dsh-miopiik-magic-keywords": "^0.1.13",
-    "dsh-miopiik-model-auth": "^0.1.13",
-    "dsh-miopiik-recall": "^0.1.13",
-    "dsh-miopiik-run-stats": "^0.1.13",
-    "dsh-miopiik-tool-recovery": "^0.1.13"
+    "dsh-miopiik-capabilities": "^0.2.0",
+    "dsh-miopiik-checkpoint": "^0.2.0",
+    "dsh-miopiik-diagnostics": "^0.2.0",
+    "dsh-miopiik-executor": "^0.2.0",
+    "dsh-miopiik-learn": "^0.2.0",
+    "dsh-miopiik-magic-keywords": "^0.2.0",
+    "dsh-miopiik-model-auth": "^0.2.0",
+    "dsh-miopiik-recall": "^0.2.0",
+    "dsh-miopiik-run-stats": "^0.2.0",
+    "dsh-miopiik-tool-recovery": "^0.2.0"
   }
 }
