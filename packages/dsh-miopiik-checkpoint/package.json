@@ -1,7 +1,7 @@
 {
   "name": "dsh-miopiik-checkpoint",
   "description": "Compatibility auto-checkpoint plugin for MiOpIIk 0.1.x-style installs; MiOpIIk 0.2 default runtime moves this behavior into dsh-miopiik-tool-recovery. 兼容包：0.2 默认由 recovery 承担自动检查点",
-  "version": "0.1.13",
+  "version": "0.2.0",
   "type": "module",
   "main": "index.js",
   "exports": {
