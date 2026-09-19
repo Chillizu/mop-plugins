@@ -1,7 +1,7 @@
 {
   "name": "dsh-miopiik-recall",
   "description": "MiOpIIk recall compatibility adapter: native DSH sessionQuery filters first, legacy zstd log scan fallback for case-sensitive/older deployments. 原生 sessionQuery 优先的历史消息检索兼容层",
-  "version": "0.1.13",
+  "version": "0.2.0",
   "type": "module",
   "main": "index.js",
   "exports": {

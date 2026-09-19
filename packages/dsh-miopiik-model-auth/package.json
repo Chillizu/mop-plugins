@@ -1,7 +1,7 @@
 {
   "name": "dsh-miopiik-model-auth",
   "description": "Model authorization gate: subagent model/provider pulls must be in the user-controlled allowlist. 模型授权闸：子代理拉模型必须 ∈ 用户 allowlist",
-  "version": "0.1.13",
+  "version": "0.2.0",
   "type": "module",
   "main": "index.js",
   "exports": {

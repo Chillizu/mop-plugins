@@ -5,6 +5,8 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-19
+
 ### Changed
 
 - 0.1.x enters maintenance mode: security, upstream compatibility, correctness and documentation only; no new feature package is planned for this line.
@@ -15,6 +17,17 @@
 - **0.2 optional-surface reduction (stacked implementation):** `dsh-miopiik-magic-keywords` and `dsh-miopiik-learn` leave the default meta/preset runtime. Both remain installable, tested packages and stay as migration dependencies; users opt in explicitly when they want hidden keyword notices or the legacy learn workflow.
 - **0.2 recall migration:** `mop_recall` is now native-first over DSH `sessionQuery.filterSessions/filterEvents` for the normal case-insensitive path, eliminating dependence on the private `~/.dsh/sessions` layout during ordinary use. `caseSensitive=true`, a missing native seam, or a non-cancellation native failure retains the streaming zstd scanner as a compatibility fallback.
 - **0.2 executor policy hardening:** `mop_spawn_executor` is formally treated as a policy adapter over DSH native `ctx.subagents.start`, not a parallel runtime. Public routing/timeout/output contracts stay stable; every published `SubagentRun` is now disposed after success, child failure, cancellation or timeout, and cleanup failures are surfaced instead of silently leaking resources.
+
+### Compatibility
+
+- The default meta/preset runtime shrinks from the historical nine mounted plugin rows to five: `dsh-miopiik-tool-recovery`, `dsh-miopiik-executor`, `dsh-miopiik-model-auth`, `dsh-miopiik-diagnostics`, and `dsh-miopiik-recall`.
+- `dsh-miopiik-checkpoint`, `dsh-miopiik-capabilities`, and `dsh-miopiik-run-stats` remain published compatibility packages; `dsh-miopiik-magic-keywords` and `dsh-miopiik-learn` remain explicit opt-ins. No 0.1.x npm package is unpublished or registry-deprecated by 0.2.0.
+- All 10 plugin/compatibility workspaces plus the `dsh-miopiik` suite ship lockstep at `0.2.0`; internal MiOpIIk dependency ranges move to `^0.2.0`.
+
+### Validation
+
+- Ordinary CI passes syntax checking, ESLint, Prettier, documentation cross-reference checks, and the complete unit test suite for the converged stack.
+- Real DSH Composition passed against both the pinned compatibility commit `47f943859bef60e4160492346772ded9b24f765a` and upstream `master` after the recovery, diagnostics, optional-surface, native-first recall, and executor-policy migrations.
 
 ## [0.1.13] - 2026-08-28
 
@@ -157,6 +170,7 @@
 
 - **BREAKING**（相对未发布的旧本地名）：包名由 `@chillizu/mop-*` 全量改为 `dsh-miopiik-*`；工具名 `mop_*` 保持不变。迁移步骤见 README「从旧名迁移」。
 
+[0.2.0]: https://github.com/Chillizu/mop-plugins/releases/tag/v0.2.0
 [0.1.3]: https://github.com/Chillizu/mop-plugins/releases/tag/v0.1.3
 [0.1.2]: https://github.com/Chillizu/mop-plugins/releases/tag/v0.1.2
 [0.1.1]: https://github.com/Chillizu/mop-plugins/releases/tag/v0.1.1

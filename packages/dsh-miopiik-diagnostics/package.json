@@ -1,7 +1,7 @@
 {
   "name": "dsh-miopiik-diagnostics",
   "description": "MiOpIIk diagnostics domain: DSH compatibility/seam probing plus programmatic token usage telemetry. 诊断域：能力兼容探测 + token 遥测出口",
-  "version": "0.1.13",
+  "version": "0.2.0",
   "type": "module",
   "main": "index.js",
   "exports": {

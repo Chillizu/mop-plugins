@@ -1,7 +1,7 @@
 {
   "name": "dsh-miopiik-magic-keywords",
   "description": "Standing system-prompt rule keywords that steer agent behavior mid-session via notice injection. 常驻系统提示规则关键词（notice 注入引导行为）",
-  "version": "0.1.13",
+  "version": "0.2.0",
   "type": "module",
   "main": "index.js",
   "exports": {
