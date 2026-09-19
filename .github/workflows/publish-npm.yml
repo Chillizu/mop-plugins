@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      pull-requests: write
+      issues: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -20,37 +22,49 @@ jobs:
           node-version: 24
           registry-url: https://registry.npmjs.org
 
-      - name: Verify npm authorization
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          set -euo pipefail
-          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
-            echo "::error::NPM_TOKEN is not available to this workflow"
-            exit 1
-          fi
-          npm whoami
-
       - name: Verify tagged release source
         run: |
           set -euo pipefail
           node -e "const p=require('./packages/dsh-miopiik/package.json'); if(p.version!=='0.2.0') throw new Error('tag is not 0.2.0')"
 
-      - name: Publish MiOpIIk 0.2.0 in dependency order
+      - name: Verify npm authorization
+        id: auth
+        continue-on-error: true
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "NPM_TOKEN unavailable" | tee /tmp/npm-auth.txt
+            exit 1
+          fi
+          USER="$(npm whoami)"
+          echo "npm whoami: $USER" | tee /tmp/npm-auth.txt
+
+      - name: Publish MiOpIIk 0.2.0 in dependency order
+        id: publish
+        if: steps.auth.outcome == 'success'
+        continue-on-error: true
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          : > /tmp/npm-publish.txt
 
           publish_one() {
             pkg="$1"
             dir="$2"
             if npm view "$pkg@0.2.0" version >/dev/null 2>&1; then
-              echo "SKIP $pkg@0.2.0 already exists"
+              echo "SKIP $pkg@0.2.0 already exists" | tee -a /tmp/npm-publish.txt
               return 0
             fi
-            echo "PUBLISH $pkg@0.2.0 from $dir"
-            (cd "$dir" && npm publish --access public)
+            echo "PUBLISH $pkg@0.2.0" | tee -a /tmp/npm-publish.txt
+            if (cd "$dir" && npm publish --access public); then
+              echo "OK $pkg@0.2.0" | tee -a /tmp/npm-publish.txt
+            else
+              echo "FAIL $pkg@0.2.0" | tee -a /tmp/npm-publish.txt
+              return 1
+            fi
           }
 
           publish_one dsh-miopiik-tool-recovery packages/dsh-miopiik-tool-recovery
@@ -64,3 +78,26 @@ jobs:
           publish_one dsh-miopiik-capabilities packages/dsh-miopiik-capabilities
           publish_one dsh-miopiik-run-stats packages/dsh-miopiik-run-stats
           publish_one dsh-miopiik packages/dsh-miopiik
+
+      - name: Report publish status to PR 12
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AUTH_OUTCOME: ${{ steps.auth.outcome }}
+          PUBLISH_OUTCOME: ${{ steps.publish.outcome }}
+        run: |
+          {
+            echo "### npm publish automation status"
+            echo
+            echo "auth: $AUTH_OUTCOME"
+            echo "publish: $PUBLISH_OUTCOME"
+            echo
+            echo "----"
+            if [ -f /tmp/npm-auth.txt ]; then cat /tmp/npm-auth.txt; else echo "no auth report"; fi
+            if [ -f /tmp/npm-publish.txt ]; then cat /tmp/npm-publish.txt; else echo "no publish report"; fi
+            echo "----"
+            echo
+            echo "source tag: v0.2.0"
+            echo "run: $GITHUB_RUN_ID"
+          } > /tmp/pr-comment.md
+          gh pr comment 12 --body-file /tmp/pr-comment.md
