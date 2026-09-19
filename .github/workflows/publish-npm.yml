@@ -1,12 +1,12 @@
 name: Publish npm 0.2.0
 
 on:
-  pull_request:
-    branches: [main]
+  push:
+    branches:
+      - release/0.2.0-publish-artifacts
 
 jobs:
   publish:
-    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'release/0.2.0-publish-artifacts'
     runs-on: ubuntu-latest
     permissions:
       contents: read
