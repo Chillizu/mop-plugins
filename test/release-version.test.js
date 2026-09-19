@@ -24,10 +24,18 @@ test('release train keeps all public MiOpIIk workspaces lockstep', () => {
   assert.ok(meta, 'dsh-miopiik meta package must exist')
 
   const version = meta.pkg.version
-  assert.equal(manifests.length, 11, 'expected 10 plugin/compat packages + 1 suite')
+  assert.equal(
+    manifests.length,
+    11,
+    'expected 10 plugin/compat packages + 1 suite',
+  )
 
   for (const { path, pkg } of manifests) {
-    assert.equal(pkg.version, version, `${path} must match suite version ${version}`)
+    assert.equal(
+      pkg.version,
+      version,
+      `${path} must match suite version ${version}`,
+    )
     for (const [name, range] of Object.entries(pkg.dependencies || {})) {
       if (!name.startsWith('dsh-miopiik')) continue
       assert.equal(
