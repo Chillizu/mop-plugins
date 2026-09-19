@@ -26,6 +26,8 @@ jobs:
         run: bash tools/verify-crossrefs.sh
       - name: Test
         run: npm test
+      - name: Package dry-run (release RC)
+        run: npm pack --dry-run --workspaces
       # NOTE (P1-6): `npm test` uses real @deepseek-ai/schemastery (npm devDep),
       # so Config-contract regressions are caught here. The full real-boot checks
       # (npm run test:composition) need a built harness checkout and run in the
