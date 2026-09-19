@@ -30,6 +30,6 @@ jobs:
             echo
             cat /tmp/probe.txt
             echo
-            echo "No secret or variable value was printed."
+            echo "No secret or variable value was printed. Probe v2."
           } > /tmp/pr-comment.md
           gh pr comment 12 --body-file /tmp/pr-comment.md
