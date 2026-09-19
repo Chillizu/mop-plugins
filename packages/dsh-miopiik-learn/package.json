@@ -1,7 +1,7 @@
 {
   "name": "dsh-miopiik-learn",
   "description": "Project skill discovery: enumerate .dsh/skills entries with a SKILL.md present. 项目技能枚举（.dsh/skills 只读清单）",
-  "version": "0.1.13",
+  "version": "0.2.0",
   "type": "module",
   "main": "index.js",
   "exports": {
