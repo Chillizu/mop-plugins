@@ -2,3 +2,9 @@ node_modules/
 *.log
 .DS_Store
 *.tgz
+# DSH runtime state and private user profile or research material stay local.
+.dsh/
+/docs/profile/
+/docs/research/
+# Local-only legacy archive migrated from the former MiOpIIk folder.
+/.local/miopiik-archive/

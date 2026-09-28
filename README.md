@@ -9,6 +9,12 @@ MiOpIIk 的 DeepSeek Harness（DSH）插件集。
 
 **English**: MiOpIIk 0.2 is a workflow-policy suite for the DeepSeek Harness: recovery with event-driven checkpoints, a native-subagent executor policy adapter with a **zero-default model contract**, a **workspace-scoped model authorization gate**, native-first historical recall, diagnostics over DSH capability/token seams, and a four-layer (reviewer/planner/supervisor/executor) workflow preset. Install the default runtime with one command: `dsh plugin --profile web add dsh-miopiik`.
 
+## 产品定位
+
+MiOpIIk 是 DSH 上的工作流与策略扩展，不是第二套 Harness。长期价值集中在四层协作 preset、显式授权与委派规则、检查点和恢复策略。通用子代理生命周期、会话检索、token 统计、skill 存储及插件管理优先交给 DSH 原生能力；MiOpIIk 只保留薄策略适配和兼容入口。
+
+0.2.0 当前默认仍挂载五行以兼容已发布用法。后续迁移按 [`0.2 transition`](docs/design/0.2-transition.md) 执行：恢复与策略保持核心，diagnostics 只报告 DSH seam，recall 转为兼容入口并从默认挂载退出时提供版本化迁移说明。旧 npm 包名继续可解析，不通过 unpublish 清理历史用户。
+
 ## 架构总览
 
 ```mermaid
