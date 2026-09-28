@@ -13,6 +13,6 @@ npx dsh-miopiik
 
 ## 能力归属
 
-DSH 原生提供 `subagent*` 派发与模型设置、`session_*` 会话查询，以及 skill filesystem/catalog/load。MiOpIIk preset 提供 persona 和调用纪律；恢复插件提供 checkpoint、rewind、prune、规则注入；诊断插件提供能力探测与 token 投影读取。`mop_learn` 是可选的技能创作入口。
+DSH 原生提供 `subagent*` 派发与会话模型授权、`session_*` 会话查询，以及 skill filesystem/catalog/load。MiOpIIk preset 提供 persona 和调用纪律；策略插件只要求执行层每次显式给出 `provider` 与 `model`，实际授权与执行由 DSH 原生工具处理；恢复插件提供 checkpoint、rewind、prune、规则注入；诊断插件提供能力探测与 token 投影读取。`mop_learn` 是可选的技能创作入口。
 
-默认不包含自有 executor、模型授权闸或 recall 插件。升级 `0.2.x` 时先从 profile 清单移除 `dsh-miopiik-executor`、`dsh-miopiik-model-auth` 和 `dsh-miopiik-recall` 旧行，再添加 `dsh-miopiik`。
+默认不包含自有 executor、模型授权系统或 recall 插件。升级 `0.2.x` 时先从 profile 清单移除 `dsh-miopiik-executor`、`dsh-miopiik-model-auth` 和 `dsh-miopiik-recall` 旧行，再添加 `dsh-miopiik`。

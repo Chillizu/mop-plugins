@@ -4,7 +4,7 @@
 > 任何新会话（含未来执行层 subagent）只需读本文件即可无损理解项目状态。
 
 
-> **当前版本说明（MiOpIIk 0.3.0，2026-09-28）：** 下方 D1–D34 是历史决策记录，不是当前运行契约。当前结构使用 DSH 原生子代理/模型设置、会话查询与技能 catalog/loader；已删除自有 executor、model-auth、recall 实现。现行包清单、工具名和迁移入口以仓库根目录 [README](../README.md) 与 [CHANGELOG](../CHANGELOG.md) 为准。设计文档中的旧接口和实验结果仅描述当时实现。
+> **当前版本说明（MiOpIIk 0.3.1，2026-09-28）：** 下方 D1–D34 是历史决策记录，不是当前运行契约。当前结构使用 DSH 原生子代理/模型设置、会话查询与技能 catalog/loader；已删除自有 executor、model-auth、recall 实现，仅保留一个要求执行层显式路由的轻量策略守卫。现行包清单、工具名和迁移入口以仓库根目录 [README](../README.md) 与 [CHANGELOG](../CHANGELOG.md) 为准。设计文档中的旧接口和实验结果仅描述当时实现。
 
 
 ## 1. 项目定位

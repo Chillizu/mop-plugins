@@ -7,6 +7,7 @@ const ROOT = join(import.meta.dirname, '..')
 const META = join(ROOT, 'packages', 'dsh-miopiik')
 const HOST_ROWS = [
   'dsh-miopiik-tool-recovery',
+  'dsh-miopiik-policy',
   'dsh-miopiik-diagnostics',
   'dsh-tool-session-query',
 ]
@@ -16,6 +17,7 @@ const INTERNAL_PACKAGES = [
   'dsh-miopiik-diagnostics',
   'dsh-miopiik-learn',
   'dsh-miopiik-magic-keywords',
+  'dsh-miopiik-policy',
   'dsh-miopiik-run-stats',
   'dsh-miopiik-tool-recovery',
 ]

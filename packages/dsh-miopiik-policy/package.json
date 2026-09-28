@@ -1,6 +1,6 @@
 {
-  "name": "dsh-miopiik-diagnostics",
-  "description": "MiOpIIk diagnostics domain: DSH compatibility/seam probing plus programmatic token usage telemetry. 诊断域：能力兼容探测 + token 遥测出口",
+  "name": "dsh-miopiik-policy",
+  "description": "MiOpIIk fail-closed route requirement for the native DSH subagent tool",
   "version": "0.3.1",
   "type": "module",
   "main": "index.js",
@@ -30,10 +30,8 @@
     "deepseek-harness",
     "dsh-plugin",
     "cordis",
-    "diagnostics",
-    "compatibility",
-    "token-usage",
-    "telemetry"
+    "policy",
+    "subagents"
   ],
   "license": "MIT",
   "engines": {
@@ -46,5 +44,5 @@
   "bugs": {
     "url": "https://github.com/Chillizu/mop-plugins/issues"
   },
-  "homepage": "https://github.com/Chillizu/mop-plugins/tree/main/packages/dsh-miopiik-diagnostics#readme"
+  "homepage": "https://github.com/Chillizu/mop-plugins/tree/main/packages/dsh-miopiik-policy#readme"
 }

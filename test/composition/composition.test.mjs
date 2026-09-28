@@ -141,6 +141,7 @@ test('MiOpIIk 层挂载 smoke：native subagent/query 与 MiOpIIk 扩展经真�
       'tool-subagent-planner',
       'tool-subagent-supervisor',
       'tool-subagent-executor',
+      'dsh-miopiik-policy',
     ]) {
       const entry = entries.find((e) => e.options.id === id)
       assert.ok(entry && entry.fiber, `${id} entry must be mounted and active`)

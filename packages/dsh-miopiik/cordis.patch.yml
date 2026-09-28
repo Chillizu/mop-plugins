@@ -4,6 +4,8 @@
 - insert:
     - id: dsh-miopiik-tool-recovery
       name: dsh-miopiik-tool-recovery
+    - id: dsh-miopiik-policy
+      name: dsh-miopiik-policy
     - id: dsh-miopiik-diagnostics
       name: dsh-miopiik-diagnostics
     - id: dsh-tool-session-query

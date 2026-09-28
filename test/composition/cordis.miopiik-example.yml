@@ -97,5 +97,8 @@
     modelSelectionSettings: true
     maxDepth: 2
 
+- id: dsh-miopiik-policy
+  name: dsh-miopiik-policy
+
 - id: dsh-tool-session-query
   name: '@deepseek-ai/dsh-tool-session-query'

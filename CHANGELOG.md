@@ -5,6 +5,13 @@
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-09-28
+
+### Fixed
+
+- 修正 `0.3.0` 删除策略适配器后 `subagent_execute` 可静默继承父路由的问题。新增极薄 `dsh-miopiik-policy`，通过 DSH 官方 `tools.guard()` 要求显式、非空的 `provider` 与 `model`；会话授权、路由校验与子代理运行仍全部由 DSH 原生工具负责。
+- 套件及所有保留包统一升至 `0.3.1`。npm 不允许覆盖已发布的 `0.3.0`，该版本保留为历史版本并由 `0.3.1` 修正。
+
 ## [0.3.0] - 2026-09-28
 
 ### Changed
@@ -12,7 +19,7 @@
 - 对齐 DSH `0.1.7-rc.2` 当前 API，并锁定配套官方 `dsh-tool-subagent` 与 `dsh-tool-session-query` 插件版本。
 - 移除重复实现的 MiOpIIk executor、模型授权闸和 recall 插件；改用 DSH 原生子代理、模型设置与会话查询。
 - 移除 `mop_learn_list`，技能目录和加载由 DSH 原生 skill catalog / `skill` 工具提供；保留 `mop_learn` 作为项目技能创作入口。
-- preset 改用 `subagent_plan`、`subagent_supervise`、`subagent_execute`，不固定 provider/model。
+- preset 改用 `subagent_plan`、`subagent_supervise`、`subagent_execute`，不固定 provider/model；`0.3.1` 加回仅要求执行层显式填写路由的策略守卫。
 - 保留 MiOpIIk 的恢复、规则注入、诊断、token 投影、关键词插件及旧包兼容入口。
 - 本次发布包含破坏性迁移；旧 npm 版本保留并弃用，需从现有 profile 清除旧 executor/model-auth/recall 行.
 

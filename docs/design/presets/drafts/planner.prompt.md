@@ -14,7 +14,7 @@
 2. 写 plan 文件（你的唯一事实来源；计划即执行规格、零设计决策）。
 3. 冻结契约：`.dsh/contracts/`（schema / validator / golden fixtures）。
 4. 派监督层：调用 `subagent_supervise`，prompt = 项目总目标 + 报告周期约定；记录其 id。这是首个动作。
-5. 派发第一批执行层切片：`subagent_execute` × N 并行（三段式模板 2.2）；需要选择特定路由时，仅从 DSH `list_subagent_models` 返回的已授权模型中选，同时传 `provider` 与 `model`。
+5. 派发第一批执行层切片：`subagent_execute` × N 并行（三段式模板 2.2）；每个调用都从 DSH `list_subagent_models` 返回的已授权模型中选路由，并同时传 `provider` 与 `model`。
 6. 收集 → 门禁验证 → 循环；里程碑用 `send_message` 发 2.5 汇报给审查层。
 
 ## orchestrate 契约（硬规则）

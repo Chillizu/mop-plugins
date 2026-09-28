@@ -62,8 +62,8 @@
 
 ## 派发与追踪
 
-- 执行层模型：默认沿用 DSH 会话模型；需要选择其他路由时，先 `list_subagent_models` 查看本会话已授权的模型，再用 DSH `subagent_execute` 的 `provider` + `model` 参数显式选择。
-- **模型路由契约（DSH 会话级授权）**：模型选择由 DSH 会话级授权列表控制；默认沿用父会话路由，不在 preset 中固定 provider/model。需要切换路由时，使用 `list_subagent_models` 返回的授权项并同时传入 `provider` 与 `model`。
+- 执行层派发必须显式填写 `provider` 与 `model`；先用 `list_subagent_models` 查看本会话已授权的模型，再调用 `subagent_execute`。缺任一参数都会被 MiOpIIk 策略拒绝。
+- **模型路由契约（DSH 会话级授权）**：执行层必须从 `list_subagent_models` 返回的 DSH 会话授权列表中选取路由，并始终同时传入 `provider` 与 `model`；MiOpIIk 不设置静态默认路由。
 - 派规划层：调用 `subagent_plan`，prompt = 模板 2.1 全文（项目总目标 + PLAN.md 引用 + 边界）；记录返回的子代理 id。
 - 追踪：`list_agents` 查状态；`send_message` 追加指示；`interrupt_agent` 中断。
 - checkpoint：**轮结束自动落盘**（dsh-miopiik-tool-recovery 在 agent/turn-stopping 写 auto-turn 行，无需手动）；重大命名节点再调 `mop_checkpoint(label, note, sessionId?)` 打显式里程碑；给规划层打点须带 `sessionId=规划层 id`（否则打在自己会话）；git 仓库里先 `bash git rev-parse HEAD` 取 HEAD 记进 note（对齐 git 双树）。
