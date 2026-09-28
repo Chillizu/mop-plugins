@@ -1,7 +1,7 @@
 {
   "name": "dsh-miopiik",
-  "description": "MiOpIIk 0.2 plugin suite for DeepSeek Harness: five default runtime domains over ten published compatibility/plugin packages plus the four-layer workflow preset initializer. MiOpIIk 0.2 套件：5 个默认运行时域，10 个公开兼容/插件包，附四层工作流 preset",
-  "version": "0.2.0",
+  "description": "MiOpIIk workflow and recovery extensions for DeepSeek Harness 0.1.7-rc.2; native DSH owns subagent routing, model authorization, skill loading, and session search.",
+  "version": "0.3.0",
   "type": "module",
   "license": "MIT",
   "engines": {
@@ -44,15 +44,14 @@
     }
   },
   "dependencies": {
-    "dsh-miopiik-capabilities": "^0.2.0",
-    "dsh-miopiik-checkpoint": "^0.2.0",
-    "dsh-miopiik-diagnostics": "^0.2.0",
-    "dsh-miopiik-executor": "^0.2.0",
-    "dsh-miopiik-learn": "^0.2.0",
-    "dsh-miopiik-magic-keywords": "^0.2.0",
-    "dsh-miopiik-model-auth": "^0.2.0",
-    "dsh-miopiik-recall": "^0.2.0",
-    "dsh-miopiik-run-stats": "^0.2.0",
-    "dsh-miopiik-tool-recovery": "^0.2.0"
+    "dsh-miopiik-capabilities": "^0.3.0",
+    "dsh-miopiik-checkpoint": "^0.3.0",
+    "dsh-miopiik-diagnostics": "^0.3.0",
+    "dsh-miopiik-learn": "^0.3.0",
+    "dsh-miopiik-magic-keywords": "^0.3.0",
+    "dsh-miopiik-run-stats": "^0.3.0",
+    "dsh-miopiik-tool-recovery": "^0.3.0",
+    "@deepseek-ai/dsh-tool-session-query": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-tool-subagent": "0.1.7-rc.2"
   }
 }

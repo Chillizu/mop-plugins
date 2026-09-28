@@ -4,9 +4,8 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
-// 维护规则「改决策行必须同步承载文档代码块」的机制化：把四层 persona 的定稿源
+// 维护规则「改决策行必须同步承载文档代码块」的机制化：把三层 preset persona 的定稿源
 // （docs/design/presets/drafts/*.prompt.md）与运行时副本钉死为逐字同步。
-// executor 副本在 packages/dsh-miopiik-executor/index.js 的 EXECUTOR_PERSONA；
 // review/planner/supervisor 副本在 examples/miopiik/agent.cordis.yml 的 persona 块标量。
 // 一旦有人只改一处，本测试即失败（trust structure, not self-discipline）。
 const here = dirname(fileURLToPath(import.meta.url))
@@ -58,21 +57,6 @@ function extractPersona(yaml, anchor) {
   return normalize(content.join('\n'))
 }
 
-// ── executor：代码副本 ──
-test('executor persona：定稿源与运行时副本逐字同步', () => {
-  const code = readFileSync(
-    join(root, 'packages/dsh-miopiik-executor/index.js'),
-    'utf8',
-  )
-  const match = code.match(/const EXECUTOR_PERSONA = `([\s\S]*?)`/)
-  assert.ok(match, 'EXECUTOR_PERSONA 模板字面量必须存在')
-  assert.equal(
-    readDraft('executor.prompt.md'),
-    match[1].trim(),
-    'persona 漂移：executor.prompt.md 与 EXECUTOR_PERSONA 不一致，改一处须同步另一处',
-  )
-})
-
 // ── review / planner / supervisor：examples/miopiik 副本 ──
 const exampleYaml = readFileSync(
   join(root, 'examples/miopiik/agent.cordis.yml'),
@@ -94,7 +78,7 @@ test('review persona：定稿源与 examples/miopiik 副本逐字同步', () => 
 
 test('planner persona：定稿源与 examples/miopiik 副本逐字同步', () => {
   const block = extractPersona(exampleYaml, {
-    row: /toolName: subagent_planner/,
+    row: /toolName: subagent_plan/,
     marker: /persona: \|/,
   })
   assert.ok(block !== null, 'planner persona 块必须存在于 examples/miopiik')
@@ -107,7 +91,7 @@ test('planner persona：定稿源与 examples/miopiik 副本逐字同步', () =>
 
 test('supervisor persona：定稿源与 examples/miopiik 副本逐字同步', () => {
   const block = extractPersona(exampleYaml, {
-    row: /toolName: subagent_supervisor/,
+    row: /toolName: subagent_supervise/,
     marker: /persona: \|/,
   })
   assert.ok(block !== null, 'supervisor persona 块必须存在于 examples/miopiik')

@@ -1,4 +1,4 @@
-# MiOpIIk 层挂载 smoke fixture：证明「5 个 MiOpIIk 默认运行时域/插件 + planner/supervisor 层派发行」
+# MiOpIIk 层挂载 smoke fixture：证明「恢复/诊断域 + DSH native subagent/query 行」
 # 经真实 Loader 可挂载（inject 联合被真实 DSH 服务满足），而不只是 mock 测试里各自
 # register。这是 examples/miopiik 的可自动化最小面。
 #
@@ -7,7 +7,7 @@
 # 的自身 persona 注册冲突并 reject。persona 挂载由真实 dsh 会话的 standingKeyFor 验证
 # （见 examples/miopiik/README.md 的 smoke task）。
 #
-# 服务行补齐 mop 包的 inject 联合：tools / fs / sandboxPolicy / sessions /
+# 服务行补齐插件的 inject 联合：tools / fs / sandboxPolicy / sessions /
 # sessionPersistence / sessionQuery / systemPrompt / subagents。session-query-sqlite
 # 的 Config.path 无默认（required），须显式给 :memory:（对齐 base bundle）。
 - id: session
@@ -52,15 +52,15 @@
 
 # MiOpIIk 层派发行（per-child persona 覆盖 + toolFilter；persona 文本为挂载占位，
 # 全量 persona 见 examples/miopiik/agent.cordis.yml 与 docs/design/presets/drafts/）。
+- id: subagent-model-selection-settings
+  name: '@deepseek-ai/dsh-tool-subagent/model-selection-settings'
+
 - id: tool-subagent-planner
   name: '@deepseek-ai/dsh-tool-subagent'
   config:
     provider: spawn
-    toolName: subagent_planner
+    toolName: subagent_plan
     backgroundMode: continuable
-    agentOptions:
-      provider: deepseek-official
-      model: deepseek-v4-pro
     persona: |
       # 规划层（Planner）系统提示
       （挂载冒烟占位）
@@ -72,11 +72,8 @@
   name: '@deepseek-ai/dsh-tool-subagent'
   config:
     provider: spawn
-    toolName: subagent_supervisor
+    toolName: subagent_supervise
     backgroundMode: continuable
-    agentOptions:
-      provider: deepseek-official
-      model: deepseek-v4-flash
     persona: |
       # 监督层（Supervisor）系统提示
       （挂载冒烟占位）
@@ -90,11 +87,15 @@
 - id: dsh-miopiik-diagnostics
   name: 'dsh-miopiik-diagnostics'
 
-- id: dsh-miopiik-executor
-  name: 'dsh-miopiik-executor'
+- id: tool-subagent-executor
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent_execute
+    backgroundMode: one-shot
+    enableRunInBackground: false
+    modelSelectionSettings: true
+    maxDepth: 2
 
-- id: dsh-miopiik-model-auth
-  name: 'dsh-miopiik-model-auth'
-
-- id: dsh-miopiik-recall
-  name: 'dsh-miopiik-recall'
+- id: dsh-tool-session-query
+  name: '@deepseek-ai/dsh-tool-session-query'

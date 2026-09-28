@@ -3,6 +3,10 @@
 > 本文件是本计划树的**第一层**，也是整个项目的单一事实来源（对应 OMP 的 `local://PLAN.md` 语义：计划即执行规格、零设计决策交接）。
 > 任何新会话（含未来执行层 subagent）只需读本文件即可无损理解项目状态。
 
+
+> **当前版本说明（MiOpIIk 0.3.0，2026-09-28）：** 下方 D1–D34 是历史决策记录，不是当前运行契约。当前结构使用 DSH 原生子代理/模型设置、会话查询与技能 catalog/loader；已删除自有 executor、model-auth、recall 实现。现行包清单、工具名和迁移入口以仓库根目录 [README](../README.md) 与 [CHANGELOG](../CHANGELOG.md) 为准。设计文档中的旧接口和实验结果仅描述当时实现。
+
+
 ## 1. 项目定位
 
 把 oh-my-pi（OMP，can1357 的终端编程代理）的工作流思想、loop 逻辑与记忆体系迁移到 DeepSeek Harness（DSH，"一切皆插件"的 Cordis 框架），并融入用户（chillizu）自己的改进：三层 + 监督层工作流、固定通信协议、分级记忆、恢复工具包、魔法关键词。
@@ -40,7 +44,7 @@
 | D27 | 能力探测（类型：实现；状态：已落地；证据：单测）——`dsh-miopiik-capabilities` 启动/按需探测 DSH seam 可用性（sessions/sessionPersistence/sessionQuery/systemPrompt/sandboxPolicy），写 `.dsh/memory/capabilities.md` 能力清单，防上游漂移（U2 教训） | [capabilities](docs/design/capabilities.md) |
 | D28 | 审查层监督模型（类型：监督模型；状态：已落文档；证据：设计推定）——**用户即顶层监督者**（D2 显式化）；审查层里程碑后自 checkpoint（`mop_checkpoint` 默认打调用者）；审查层单点从结构缺陷降为可恢复薄弱环节 | [architecture-3-layer](docs/design/architecture-3-layer.md) §2 |
 | D29 | D19 模型路由实验（类型：实验；状态：已跑；证据：D29 弱版本 24 run + D29v2 强版本 40 执行层/20 监督层 run + 双报告）——对比强/弱执行层模型 rewind 率 + 弱监督层漏报率。D29（弱判别）：24 run 全门 PASS 但 0 rewind + 注入缺陷零传播（弱判别，初步确认）。**D29v2（强版本判别力，判别已确认）**：任务集加难 + 陷阱埋进参考材料 + golden 收紧，flash/pro 执行层 20 任务**真 rewind 均 0%**（20/20 规避参考材料语义陷阱，H1 PASS）；但**传播缺陷仍为 0 → H2 判 NULL**（监督判别无从验证，契约 §3 明示 P=0 时 NULL）；H3 墙钟代理失真未证实（已拆 H3-latency/H3-cost + `mop_run_stats` token 出口，待 D29v3 复测）。raw golden 9 个 FAIL 全为 golden 装置缺陷（env 注入/readdir mock/任务依赖/返回消息断言位置），非模型能力。报告见 [d29v2-experiment-report](docs/review/d29v2-experiment-report.md) | [model-routing-experiment](docs/design/model-routing-experiment.md) |
-| D30 | 模型授权闸（类型：实现；状态：已落地；证据：28 单测）——subagent 模型必须 ∈ 授权集（全局默认 ∪ allowlist `~/.dsh/memory/global/model-allowlist.md`），闸点在 `agent/request` 全局 waterfall（覆盖原生 subagent/workflow/ralph/mop_spawn_executor/continuable 全部派发路径）；`mop_model_authorize`/`mop_model_list` 管理；鉴权对象=资源(model)非动作 | [model-auth](docs/design/model-auth.md) |
+| D30 | 模型授权闸（类型：实现；状态：已落地；证据：28 单测）——subagent 模型必须 ∈ 授权集（全局默认 ∪ allowlist `~/.dsh/memory/global/model-allowlist.md`），闸点在 `agent/request` 全局 waterfall（覆盖原生 subagent/workflow/ralph/mop_spawn_executor/continuable 全部派发路径）；`mop_model_authorize`/`mop_model_list` 管理；鉴权对象=资源(model)非动作 | 旧模型授权设计（0.3 中改由 DSH 托管） |
 | D31 | 监督层漏报水位（类型：实测发现；状态：已实测；证据：D29 §3.2 + D29v2）——D29 弱版监督层对细微（涌现）缺陷漏报 33%（2/6，flash/pro 持平，> D16 预注册 20% 红线）。决策：**接受为已知限制**（N=6 方向性证据）。**D29v2 复核**：执行层传播缺陷为 0（无坏活可查）→ 监督漏报率无分母，**无法复测/复用该 33% 结论**；「双模型交叉监督」缓解候选在 D29v2 因无传播样本获证，等待含传播缺陷的实验轮验证 | [d29v2-experiment-report](docs/review/d29v2-experiment-report.md) §3 |
 | D32 | 轻量模式 = 三档 preset（类型：设计；状态：已定；证据：外部讨论 + 社区查证）——纠正「极简模式最好」（官方极简=基准测试用，非生产推荐）；审查层「只用 bash」**否决**（bash 是无差别管道：藏能力 + 丢 sandboxPolicy 细粒度，且砍掉体系在用的 read/grep/edit/session_search）；工具面已按职责收窄（执行 7/监督 6），真瘦身空间在 prompt+上下文。三档：miopiik-lite（单会话无 subagent 行）/ miopiik（现状）/ miopiik-full（四层+监督+授权闸全开），三档共享 persona + mop 插件；lite 无 subagent 行 = U3 场景级禁停机制化；升档路径写入审查层 persona。红线：不动 compaction（D24）、不动 session_query/记忆（D12/D10） | [lightweight-mode](docs/design/lightweight-mode.md) |
 | D33 | 上游裁判输入通道（类型：过程原则；状态：已定；证据：上游模型实战 + D17）——审查层=体系内 CTO（当事人、有执行权、判错担责）；上游模型裁判=外聘审计（局外人、零利益相关、每轮重置、只有说服力）；其「清醒」=结构性清白（无沉没成本）。教训：给上游裁判的永远是一手产物 + 复算路径（仓库/源码/原始报告），不是中间层结论；2.5 汇报模板「证据等级：URL/日志/复算脚本」栏是最不能省的 | [report-template](docs/design/templates/report-template.md) §4 |

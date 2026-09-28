@@ -31,13 +31,14 @@ function msgOf(error) {
       : String(error)
 }
 
-// list()/listSnapshots() 条目可能是字符串或带 id/sessionId 的对象（上游形状未
-// 稳定，探测端必须容忍两种）；提取不出就跳过实调而非误报失败。
+// DSH 0.1.7 sessionPersistence.list() 返回 { header, revision, ... }。
 function idOf(entry) {
   if (typeof entry === 'string') return entry
   if (entry && typeof entry === 'object') {
     if (typeof entry.id === 'string') return entry.id
     if (typeof entry.sessionId === 'string') return entry.sessionId
+    if (entry.header && typeof entry.header.id === 'string')
+      return entry.header.id
   }
   return null
 }
@@ -96,11 +97,11 @@ async function probe(ctx) {
     'fork creates a real session',
   )
 
-  // ── sessionPersistence.listSnapshots：非破坏性实调，并为 readFrom 探测目标 ──
+  // ── sessionPersistence.list/open + SessionHandle.read ──
   let snapshotTarget = null
   {
-    const r = row('sessionPersistence.listSnapshots')
-    const fn = ctx.sessionPersistence && ctx.sessionPersistence.listSnapshots
+    const r = row('sessionPersistence.list')
+    const fn = ctx.sessionPersistence && ctx.sessionPersistence.list
     r.present = typeof fn === 'function'
     if (r.present) {
       try {
@@ -108,7 +109,7 @@ async function probe(ctx) {
         const items = Array.isArray(snapshots) ? snapshots : []
         r.invoked = 'ok'
         r.ok = true
-        r.detail = `${items.length} snapshots`
+        r.detail = `${items.length} stored sessions`
         snapshotTarget = idOf(items[0])
       } catch (error) {
         r.invoked = 'fail'
@@ -118,19 +119,24 @@ async function probe(ctx) {
   }
 
   {
-    const r = row('sessionPersistence.readFrom')
-    const fn = ctx.sessionPersistence && ctx.sessionPersistence.readFrom
+    const r = row('sessionPersistence.open + SessionHandle.read/close')
+    const persistence = ctx.sessionPersistence
+    const fn = persistence && persistence.open
     r.present = typeof fn === 'function'
     const target = readTarget ?? snapshotTarget
     if (r.present && target !== null) {
+      let handle
       try {
-        await fn.call(ctx.sessionPersistence, target, 0)
+        handle = await fn.call(persistence, target, 'read')
+        await handle.read(0)
         r.invoked = 'ok'
         r.ok = true
-        r.detail = `readFrom(${target}, 0) ok`
+        r.detail = `open(${target}, 'read') + read(0) ok`
       } catch (error) {
         r.invoked = 'fail'
         r.detail = msgOf(error)
+      } finally {
+        if (handle) await handle.close()
       }
     } else if (r.present) {
       r.ok = true
@@ -152,25 +158,18 @@ async function probe(ctx) {
     'needs a real session',
   )
 
-  // ── sessionQuery.searchSessions：非破坏性实调（既有行为，补在场检查）──
-  {
-    const r = row('sessionQuery.searchSessions')
-    const fn = ctx.sessionQuery && ctx.sessionQuery.searchSessions
-    r.present = typeof fn === 'function'
-    if (r.present) {
-      try {
-        const page = await fn.call(ctx.sessionQuery, {
-          query: 'capability-probe',
-        })
-        r.invoked = 'ok'
-        r.ok = true
-        r.detail = `${page.items.length} hits`
-      } catch (error) {
-        r.invoked = 'fail'
-        r.detail = msgOf(error)
-      }
-    }
-  }
+  // DSH 0.1.7 exposes provider-independent history reads/filters plus optional
+  // ranked search; only inspect the stable abstract service contract here.
+  presenceOnly(
+    'sessionQuery.readSession',
+    ctx.sessionQuery && ctx.sessionQuery.readSession,
+    'reads a complete session log',
+  )
+  presenceOnly(
+    'sessionQuery.filterSessions/filterEvents',
+    ctx.sessionQuery && ctx.sessionQuery.filterSessions,
+    'requires a target session for event filtering',
+  )
 
   return results
 }
@@ -342,13 +341,22 @@ export function applyRunStats(ctx) {
           // 不得转 cold 兜底：cold 服务已 dispose 会话，live 会话转 cold 会把
           // 「tokenMeter 未挂载」误诊为「不存在或未持久化」（P3-7，issue #3）。
         } else {
-          // cold 兜底：仅非 live（已 dispose / 不存在）时从持久化投影缓存读
-          //（缓存行 + readFrom 尾段重折叠）
+          // 冷会话：先由 DSH sessionQuery 读完整、已回放校验的日志，再交给
+          // 最新 sessionProjectionCache.coldSnapshot(meta, inheritedEventCount, events)。
           const cache = ctx.get('sessionProjectionCache')
           if (cache) {
             try {
-              const snap = await cache.coldSnapshot(sessionId)
-              usage = snap.values.tokenUsage
+              const query = ctx.get('sessionQuery')
+              if (!query || typeof query.readSession !== 'function') {
+                throw new Error('sessionQuery.readSession unavailable')
+              }
+              const log = await query.readSession(sessionId)
+              const snap = await cache.coldSnapshot(
+                log.session,
+                log.inheritedEventCount,
+                log.events,
+              )
+              usage = snap?.values?.tokenUsage
               asOfSeq = snap.asOfSeq
             } catch (error) {
               throw new Error(

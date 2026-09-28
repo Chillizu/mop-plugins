@@ -26,8 +26,8 @@ test('release train keeps all public MiOpIIk workspaces lockstep', () => {
   const version = meta.pkg.version
   assert.equal(
     manifests.length,
-    11,
-    'expected 10 plugin/compat packages + 1 suite',
+    8,
+    'expected seven retained plugin/compat packages + 1 suite',
   )
 
   for (const { path, pkg } of manifests) {

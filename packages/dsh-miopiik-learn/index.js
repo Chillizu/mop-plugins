@@ -94,46 +94,4 @@ export function apply(ctx) {
       },
     }),
   )
-
-  // ── mop_learn_list：只读枚举已铸 skill 名称 ──
-  ctx.tools.register(
-    defineTool({
-      name: 'mop_learn_list',
-      description:
-        'List minted skills under the project .dsh/skills/: returns the sorted names of directories that actually contain a SKILL.md. Read-only — never reads or exposes skill content, never writes.',
-      parameters: {},
-      output: stringOutput,
-      async execute(_args, exec) {
-        const agent = exec.agent
-        const cwd =
-          agent &&
-          agent.session &&
-          agent.session.header &&
-          agent.session.header.cwd
-        if (!cwd) throw new Error('mop_learn_list: session cwd unavailable')
-        const skillsDirPath = join(cwd, SKILLS_REL_DIR)
-        const dir = await ctx.fs.resolve(skillsDirPath, { cwd })
-        const dirInfo = await ctx.fs.stat(dir)
-        if (dirInfo === undefined || dirInfo.type !== 'directory') {
-          return '(no skills)'
-        }
-        const entries = await ctx.fs.listDir(dir)
-        const names = []
-        for (const entry of entries) {
-          if (!entry || entry.type !== 'directory') continue
-          const skillTarget = await ctx.fs.resolve(
-            join(skillsDirPath, entry.name, 'SKILL.md'),
-            { cwd },
-          )
-          const info = await ctx.fs.stat(skillTarget)
-          if (info !== undefined) names.push(entry.name)
-        }
-        if (names.length === 0) return '(no skills)'
-        return names
-          .sort()
-          .map((n) => `- ${n}`)
-          .join('\n')
-      },
-    }),
-  )
 }

@@ -1,9 +1,4 @@
-# The full fixture (tools/session/agent/subagent/subagent-spawn) + all three
-# Config-schema mop packages. Each carries no config here, so composition.test.mjs
-# checks Loader coercion against the current contracts: executor gets only its
-# non-model defaults (maxOutputChars/strict) while provider/model remain absent
-# by design; the other schemas keep their own defaults/optional fields. This
-# catches mock-stub-masked schema drift without reintroducing model fallback.
+# Retained MiOpIIk recovery, diagnostics and optional keyword plugins on the real DSH loader.
 - id: session
   name: '@deepseek-ai/dsh-session'
 
@@ -24,11 +19,11 @@
 - id: subagent-spawn-in-process
   name: '@deepseek-ai/dsh-subagent-spawn-in-process'
 
-- id: dsh-miopiik-executor
-  name: 'dsh-miopiik-executor'
+- id: dsh-miopiik-tool-recovery
+  name: 'dsh-miopiik-tool-recovery'
 
 - id: dsh-miopiik-magic-keywords
   name: 'dsh-miopiik-magic-keywords'
 
-- id: dsh-miopiik-model-auth
-  name: 'dsh-miopiik-model-auth'
+- id: dsh-miopiik-diagnostics
+  name: 'dsh-miopiik-diagnostics'

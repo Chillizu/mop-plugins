@@ -19,6 +19,33 @@ const stringOutput = {
 const CHECKPOINT_LINE =
   /^- \[[^\]]*\] (.+?) \| session=(\S+) \| seq=(\d+)(?: \| (.*))?\s*$/
 
+// Prefer DSH 0.1.7's replay-validated logical read. The persistence handle
+// remains a narrow fallback for compositions that do not mount sessionQuery.
+async function readAllEvents(sessionPersistence, sessionQuery, sid) {
+  if (typeof sessionQuery?.readSession === 'function') {
+    const log = await sessionQuery.readSession(sid)
+    return {
+      meta: log.session,
+      inheritedEventCount: log.inheritedEventCount,
+      events: log.events,
+    }
+  }
+  if (typeof sessionPersistence.readFrom === 'function') {
+    return await sessionPersistence.readFrom(sid, 0)
+  }
+  const handle = await sessionPersistence.open(sid, 'read')
+  try {
+    const { events } = await handle.read(0)
+    return {
+      meta: handle.header,
+      inheritedEventCount: handle.inheritedEventCount,
+      events,
+    }
+  } finally {
+    await handle.close()
+  }
+}
+
 // checkpoint 落点（D13，docs/design/recovery-toolkit.md）：项目 .dsh/memory/checkpoints.md，同包内写/读三处必须同一路径。
 const CHECKPOINTS_REL_PATH = '.dsh/memory/checkpoints.md'
 
@@ -264,6 +291,8 @@ async function pruneWithRetry(fs, target, keep, signal, policy) {
 
 export function apply(ctx) {
   const { tools, fs, sandboxPolicy, sessions, sessionPersistence } = ctx
+  const sessionQuery =
+    typeof ctx.get === 'function' ? ctx.get('sessionQuery') : ctx.sessionQuery
   installAutoCheckpoint(ctx, fs, sandboxPolicy)
   // sessionId -> { disposer, text }；规则状态按会话隔离，避免多会话互相覆盖。
   const ruleState = new Map()
@@ -325,7 +354,8 @@ export function apply(ctx) {
           const target = sessions.get(sid)
           events = target
             ? target.events
-            : (await sessionPersistence.readFrom(sid, 0)).events
+            : (await readAllEvents(sessionPersistence, sessionQuery, sid))
+                .events
         } else {
           sid = agent.session.id
           events = agent.session.events
@@ -387,7 +417,7 @@ export function apply(ctx) {
           const child = sessions.fork(sid, seq)
           return `rewound (hot): forked ${sid} @ seq ${seq} -> child ${child.id}`
         }
-        const read = await sessionPersistence.readFrom(sid, 0)
+        const read = await readAllEvents(sessionPersistence, sessionQuery, sid)
         if (seq >= read.events.length)
           throw new Error(
             `boundary seq ${seq} out of range (cold session has ${read.events.length} events)`,
@@ -399,8 +429,9 @@ export function apply(ctx) {
           meta: {
             ...(read.meta.cwd ? { cwd: read.meta.cwd } : {}),
             parentSession: sid,
-            seedLength: seed.length,
+            isSeeded: true,
           },
+          inheritedEventCount: seed.length,
         })
         return `rewound (cold): forked ${sid} @ seq ${seq} -> child ${child.id}`
       },

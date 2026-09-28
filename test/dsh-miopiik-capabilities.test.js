@@ -21,11 +21,21 @@ function makeCtx(overrides = {}) {
     },
     sessions: { list: () => [], fork: () => ({ id: 'x' }) },
     sessionPersistence: {
-      listSnapshots: async () => [],
-      readFrom: async () => ({ meta: {}, events: [] }),
+      list: async () => [],
+      open: async (id) => ({
+        header: { id },
+        read: async () => ({ events: [] }),
+        close: async () => {},
+      }),
     },
     sessionQuery: {
-      searchSessions: async () => ({ items: [{ sessionId: 's1' }] }),
+      readSession: async (id) => ({
+        session: { id },
+        inheritedEventCount: 0,
+        events: [],
+      }),
+      filterSessions: async () => [],
+      filterEvents: async () => [],
     },
     systemPrompt: { section: () => () => {} },
     sandboxPolicy: { resolve: () => ({}) },
@@ -58,30 +68,34 @@ test('apply registers the probe tool and writes a manifest', async () => {
   const result = await tool.execute({}, { agent: agent('session-a') })
   assert.match(result, /capabilities manifest written/)
   assert.equal(writes.length, 1)
-  assert.match(writes[0].content, /sessionPersistence\.listSnapshots/)
-  assert.match(writes[0].content, /sessionQuery\.searchSessions/)
+  assert.match(writes[0].content, /sessionPersistence\.list/)
+  assert.match(writes[0].content, /sessionQuery\.readSession/)
   assert.match(writes[0].content, /status：OK/)
   assert.equal(writes[0].intent.kind, 'createIfAbsent')
 })
 
 test('degraded seam is recorded as DEGRADED', async () => {
   const { ctx, registered, writes } = makeCtx({
-    sessionQuery: {
-      searchSessions: async () => {
-        throw Object.assign(new Error('search disabled'), {
-          code: 'SESSION_QUERY_SEARCH_DISABLED',
+    sessionPersistence: {
+      list: async () => {
+        throw Object.assign(new Error('persistence disabled'), {
+          code: 'PERSISTENCE_LIST_DISABLED',
         })
       },
+      open: async () => ({
+        read: async () => ({ events: [] }),
+        close: async () => {},
+      }),
     },
   })
   apply(ctx)
   const tool = registered.find((t) => t.name === 'mop_probe_capabilities')
   const result = await tool.execute({}, { agent: agent('session-a') })
-  assert.match(result, /degraded: sessionQuery\.searchSessions/)
+  assert.match(result, /degraded: sessionPersistence\.list/)
   // 双证据表：在场[是]（原语在）但实调[fail]，错误码进详情列。
   assert.match(
     writes[0].content,
-    /sessionQuery\.searchSessions` \| \[是\] \| \[fail\] \| SESSION_QUERY_SEARCH_DISABLED/,
+    /sessionPersistence\.list` \| \[是\] \| \[fail\] \| PERSISTENCE_LIST_DISABLED/,
   )
   assert.match(writes[0].content, /status：DEGRADED/)
 })
@@ -105,10 +119,10 @@ test('manifest records two evidence levels plus harness environment', async () =
     content,
     /sessions\.fork` \| \[是\] \| — \| primitive present \(not invoked: fork creates a real session\)/,
   )
-  // 无 live 会话、无快照 → readFrom 降级为在场检查，如实标注未实调。
+  // 无 live 会话、无快照 → open 降级为在场检查，如实标注未实调。
   assert.match(
     content,
-    /sessionPersistence\.readFrom` \| \[是\] \| — \| primitive present \(not invoked: no live session\/snapshot to read\)/,
+    /sessionPersistence\.open \+ SessionHandle\.read\/close` \| \[是\] \| — \| primitive present \(not invoked: no live session\/snapshot to read\)/,
   )
   // 运行环境行。
   assert.match(content, /运行环境：node v/)
@@ -130,10 +144,13 @@ test('manifest 标注本会话层级：根=审查层，depth1=规划层', async 
 test('detail 字段的 | 与换行被转义，不破坏 markdown 表格', async () => {
   const { ctx, registered, writes } = makeCtx({
     sessionPersistence: {
-      listSnapshots: async () => {
+      list: async () => {
         throw new Error('a|b\nc')
       },
-      readFrom: async () => ({ meta: {}, events: [] }),
+      open: async () => ({
+        read: async () => ({ events: [] }),
+        close: async () => {},
+      }),
     },
   })
   apply(ctx)
@@ -143,7 +160,7 @@ test('detail 字段的 | 与换行被转义，不破坏 markdown 表格', async 
   assert.doesNotMatch(writes[0].content, /a\|b\nc/)
 })
 
-test('readFrom probe invokes with a discovered target (live id preferred)', async () => {
+test('open probe invokes with a discovered target (live id preferred)', async () => {
   const readCalls = []
   const { ctx, registered, writes } = makeCtx({
     sessions: {
@@ -151,10 +168,10 @@ test('readFrom probe invokes with a discovered target (live id preferred)', asyn
       fork: () => ({ id: 'x' }),
     },
     sessionPersistence: {
-      listSnapshots: async () => ['snap-7'],
-      readFrom: async (target, seq) => {
-        readCalls.push([target, seq])
-        return { meta: {}, events: [] }
+      list: async () => [{ header: { id: 'snap-7' } }],
+      open: async (target, mode) => {
+        readCalls.push([target, mode])
+        return { read: async () => ({ events: [] }), close: async () => {} }
       },
     },
   })
@@ -162,10 +179,10 @@ test('readFrom probe invokes with a discovered target (live id preferred)', asyn
   const tool = registered.find((t) => t.name === 'mop_probe_capabilities')
   await tool.execute({}, { agent: agent('session-a') })
   // live 会话 id 优先于快照目标。
-  assert.deepEqual(readCalls, [['live-1', 0]])
+  assert.deepEqual(readCalls, [['live-1', 'read']])
   assert.match(
     writes[0].content,
-    /sessionPersistence\.readFrom` \| \[是\] \| \[ok\] \| readFrom\(live-1, 0\) ok/,
+    /sessionPersistence\.open \+ SessionHandle\.read\/close` \| \[是\] \| \[ok\] \| open\(live-1, 'read'\) \+ read\(0\) ok/,
   )
 })
 

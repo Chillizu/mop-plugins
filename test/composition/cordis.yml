@@ -10,8 +10,7 @@
 #
 # NOTE: this clean fixture holds only harness services (no mop packages), so the
 # spawn-driver / Loader-default assertions stay independent of mop Config
-# schemas. The Config-schema mop packages (dsh-miopiik-executor / dsh-miopiik-magic-keywords /
-# dsh-miopiik-model-auth) are mounted separately in cordis.with-mop.yml; see
+# services. Retained MiOpIIk plugins are mounted separately in cordis.with-mop.yml; see
 # composition.test.mjs.
 #
 # The spawn row carries NO config on purpose: assertion ① proves the Loader

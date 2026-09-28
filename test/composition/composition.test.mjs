@@ -70,45 +70,27 @@ test('real spawn driver throws TypeError when a start request lacks signal', asy
   )
 })
 
-test('real Loader coerces all three mop Config schemas into apply(config)', async () => {
-  // Regressions: dsh-miopiik-executor used z.number().int() and dsh-miopiik-model-auth used
-  // z.string().optional(), both absent from real schemastery; the mock stub hid
-  // them. This boots all three Config-schema packages through the real Loader,
-  // so any future bogus schema method fails at boot rather than at a preset
-  // switch.
+test('real Loader mounts retained MiOpIIk plugins and optional keyword config', async () => {
   const ctx2 = await boot('mop-composition', CONFIG_WITH_MOP)
   try {
     const entries = [...ctx2.loader.entries()]
-    const exec = entries.find(
-      (entry) => entry.options.id === 'dsh-miopiik-executor',
+    const recovery = entries.find(
+      (entry) => entry.options.id === 'dsh-miopiik-tool-recovery',
     )
-    assert.ok(exec, 'dsh-miopiik-executor entry must be mounted and active')
-    assert.equal(exec.fiber.config.maxOutputChars, 4000)
-    assert.equal(exec.fiber.config.strict, false)
-    // Zero-default model contract (0.1.7+): provider/model are deliberately
-    // absent from Config. The caller must pass both explicitly per execution.
-    assert.equal(exec.fiber.config.provider, undefined)
-    assert.equal(exec.fiber.config.model, undefined)
-
+    assert.ok(recovery, 'MiOpIIk recovery entry must be mounted and active')
+    const diagnostics = entries.find(
+      (entry) => entry.options.id === 'dsh-miopiik-diagnostics',
+    )
+    assert.ok(
+      diagnostics,
+      'MiOpIIk diagnostics entry must be mounted and active',
+    )
     const kw = entries.find(
       (entry) => entry.options.id === 'dsh-miopiik-magic-keywords',
     )
-    assert.ok(kw, 'dsh-miopiik-magic-keywords entry must be mounted and active')
-    assert.ok(
-      kw.fiber.config.notices.ultrathink,
-      'notices.ultrathink default must be present',
-    )
-    assert.ok(
-      kw.fiber.config.notices.workflowz,
-      'notices.workflowz default must be present',
-    )
-
-    const auth = entries.find(
-      (entry) => entry.options.id === 'dsh-miopiik-model-auth',
-    )
-    assert.ok(auth, 'dsh-miopiik-model-auth entry must be mounted and active')
-    // allowlistPath is optional (no .default), so the Loader leaves it undefined.
-    assert.equal(auth.fiber.config.allowlistPath, undefined)
+    assert.ok(kw, 'optional keyword plugin must be mounted in this fixture')
+    assert.ok(kw.fiber.config.notices.ultrathink)
+    assert.ok(kw.fiber.config.notices.workflowz)
   } finally {
     await ctx2.fiber.dispose()
   }
@@ -145,7 +127,7 @@ test('run-stats: real Loader 挂载 + tokenUsage 投影零桶锚', async () => {
   }
 })
 
-test('MiOpIIk 层挂载 smoke：0.2 default domains + planner/supervisor delegation 经真实 Loader 可挂载', async () => {
+test('MiOpIIk 层挂载 smoke：native subagent/query 与 MiOpIIk 扩展经真实 Loader 可挂载', async () => {
   // 证明 MiOpIIk 0.2 默认层（收敛域 + planner/supervisor 层派发行）的 inject 联合被
   // 真实 DSH 服务满足、可整体挂载——而不只是各自 mock register。persona 行不在本
   // fixture（需 agent-scoped context），由真实 dsh 会话的 standingKeyFor 验证。
@@ -155,28 +137,15 @@ test('MiOpIIk 层挂载 smoke：0.2 default domains + planner/supervisor delegat
     for (const id of [
       'dsh-miopiik-tool-recovery',
       'dsh-miopiik-diagnostics',
-      'dsh-miopiik-executor',
-      'dsh-miopiik-model-auth',
-      'dsh-miopiik-recall',
+      'dsh-tool-session-query',
       'tool-subagent-planner',
       'tool-subagent-supervisor',
+      'tool-subagent-executor',
     ]) {
       const entry = entries.find((e) => e.options.id === id)
       assert.ok(entry && entry.fiber, `${id} entry must be mounted and active`)
     }
-    const executor = ctx4.tools.get('mop_spawn_executor')
-    assert.ok(
-      executor,
-      'mop_spawn_executor must be visible after real Loader mount',
-    )
-    await assert.rejects(
-      executor.execute(
-        { prompt: 'composition policy probe' },
-        { signal: new AbortController().signal },
-      ),
-      /未指定执行层模型/,
-      'real Loader mount must preserve MiOpIIk zero-default fail-closed routing',
-    )
+    assert.ok(ctx4.tools.get('subagent_execute'))
   } finally {
     await ctx4.fiber.dispose()
   }

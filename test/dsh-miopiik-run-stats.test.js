@@ -5,8 +5,18 @@ const { apply } = await import('../packages/dsh-miopiik-run-stats/index.js')
 
 function captureTool(services) {
   let tool
+  const available = {
+    sessionQuery: {
+      readSession: async (id) => ({
+        session: { id },
+        inheritedEventCount: 0,
+        events: [],
+      }),
+    },
+    ...services,
+  }
   const ctx = {
-    get: (name) => services[name],
+    get: (name) => available[name],
     tools: { register: (t) => (tool = t) },
   }
   apply(ctx)
@@ -47,19 +57,23 @@ test('live-first: 从 live session 快照读取精确桶', async () => {
   })
 })
 
-test('cold 兜底: live 缺失时走 coldSnapshot 且透传 sessionId', async () => {
+test('cold 兜底: live 缺失时走 coldSnapshot 且使用 sessionQuery 读取的日志', async () => {
   let seen
   const tool = captureTool({
     sessions: { get: () => undefined },
     sessionProjectionCache: {
-      coldSnapshot: async (id) => {
-        seen = id
+      coldSnapshot: async (meta, inheritedEventCount, events) => {
+        seen = { meta, inheritedEventCount, events }
         return { asOfSeq: 7, values: { tokenUsage: BUCKETS } }
       },
     },
   })
   const result = await tool.execute({ sessionId: 'cold-9' })
-  assert.equal(seen, 'cold-9')
+  assert.deepEqual(seen, {
+    meta: { id: 'cold-9' },
+    inheritedEventCount: 0,
+    events: [],
+  })
   assert.deepEqual(JSON.parse(result), {
     sessionId: 'cold-9',
     asOfSeq: 7,

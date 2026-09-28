@@ -9,9 +9,9 @@
 //   1. test/composition/node_modules — the Loader resolves the fixture's bare
 //      row names from the config directory (ctx.baseUrl), so every row package
 //      must be reachable there.
-//   2. mop-plugins/node_modules/@deepseek-ai — dsh-miopiik-executor's own imports
+//   2. mop-plugins/node_modules/@deepseek-ai — MiOpIIk plugin imports
 //      (@deepseek-ai/dsh-tools, @deepseek-ai/schemastery) resolve from its real
-//      path (packages/dsh-miopiik-executor) by walking up the tree.
+//      path (workspace packages) by walking up the tree.
 //
 // Node resolves each symlink to the harness realpath, so transitive deps come
 // from the harness's own pnpm-installed node_modules — one shared
@@ -63,9 +63,14 @@ const FIXTURE_LINKS = [
     'packages/session-query/session-query-sqlite',
   ],
   ['@deepseek-ai', 'dsh-tool-subagent', 'packages/subagent/tool-subagent'],
+  [
+    '@deepseek-ai',
+    'dsh-tool-session-query',
+    'packages/session-query/tool-session-query',
+  ],
 ]
 
-// [scope, name, target-under-harness] — dsh-miopiik-executor's own imports
+// [scope, name, target-under-harness] — MiOpIIk plugin imports
 const WORKSPACE_LINKS = [
   ['@deepseek-ai', 'dsh-tools', 'packages/core/tools'],
   ['@deepseek-ai', 'dsh-llm', 'packages/llm/llm'],
@@ -95,12 +100,10 @@ export function ensureLinks() {
   // The Config-schema mop packages the composition tests mount.
   for (const name of [
     'dsh-miopiik-tool-recovery',
-    'dsh-miopiik-executor',
     'dsh-miopiik-magic-keywords',
-    'dsh-miopiik-capabilities',
     'dsh-miopiik-learn',
-    'dsh-miopiik-model-auth',
     'dsh-miopiik-run-stats',
+    'dsh-miopiik-diagnostics',
   ]) {
     linkIfMissing(
       join(here, 'node_modules', name),

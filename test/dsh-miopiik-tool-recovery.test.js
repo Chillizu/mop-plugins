@@ -47,6 +47,7 @@ function makeCtx(overrides = {}) {
     sessionPersistence: {
       readFrom: async () => ({ meta: {}, events: [] }),
     },
+    sessionQuery: undefined,
     ...overrides,
   }
   return { ctx, registered, writes, creates, listeners, teardowns }
@@ -260,8 +261,12 @@ test('cold rewind seeds through the inclusive boundary and passes meta', async (
         '- [2026-01-01T00:00:00.000Z] milestone | session=sess-cold | seq=7\n',
       writeText: async () => {},
     },
-    sessionPersistence: {
-      readFrom: async () => ({ meta: { cwd: '/proj' }, events }),
+    sessionQuery: {
+      readSession: async () => ({
+        session: { cwd: '/proj' },
+        inheritedEventCount: 0,
+        events,
+      }),
     },
   })
   apply(ctx)
@@ -275,7 +280,8 @@ test('cold rewind seeds through the inclusive boundary and passes meta', async (
   assert.equal(creates[0].seed.length, 8) // events[0..7] inclusive
   assert.equal(creates[0].meta.parentSession, 'sess-cold')
   assert.equal(creates[0].meta.cwd, '/proj')
-  assert.equal(creates[0].meta.seedLength, 8)
+  assert.equal(creates[0].meta.isSeeded, true)
+  assert.equal(creates[0].inheritedEventCount, 8)
 })
 
 test('hot rewind uses sessions.fork', async () => {
