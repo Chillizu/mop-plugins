@@ -1,7 +1,7 @@
 {
   "name": "dsh-miopiik-run-stats",
   "description": "Compatibility package for MiOpIIk token run stats; implementation is owned by dsh-miopiik-diagnostics in 0.2. 兼容包：token 遥测实现已并入 diagnostics",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "type": "module",
   "main": "index.js",
   "exports": {
@@ -19,7 +19,7 @@
     }
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-tools": "0.1.7-rc.2",
+    "@deepseek-ai/dsh-tools": "^0.2.0-rc.2",
     "@deepseek-ai/schemastery": "3.18.4"
   },
   "peerDependenciesMeta": {
@@ -50,6 +50,6 @@
   },
   "homepage": "https://github.com/Chillizu/mop-plugins/tree/main/packages/dsh-miopiik-run-stats#readme",
   "dependencies": {
-    "dsh-miopiik-diagnostics": "^0.3.1"
+    "dsh-miopiik-diagnostics": "^0.4.0"
   }
 }

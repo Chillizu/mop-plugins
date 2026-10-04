@@ -1,7 +1,7 @@
 {
   "name": "dsh-miopiik",
-  "description": "MiOpIIk workflow and recovery extensions for DeepSeek Harness 0.1.7-rc.2; native DSH owns subagent routing, model authorization, skill loading, and session search.",
-  "version": "0.3.1",
+  "description": "MiOpIIk workflow and recovery extensions for DeepSeek Harness 0.2; native DSH owns subagent routing, model authorization, skill loading, and session search.",
+  "version": "0.4.0",
   "type": "module",
   "license": "MIT",
   "engines": {
@@ -44,15 +44,13 @@
     }
   },
   "dependencies": {
-    "dsh-miopiik-capabilities": "^0.3.1",
-    "dsh-miopiik-checkpoint": "^0.3.1",
-    "dsh-miopiik-diagnostics": "^0.3.1",
-    "dsh-miopiik-learn": "^0.3.1",
-    "dsh-miopiik-magic-keywords": "^0.3.1",
-    "dsh-miopiik-policy": "^0.3.1",
-    "dsh-miopiik-run-stats": "^0.3.1",
-    "dsh-miopiik-tool-recovery": "^0.3.1",
-    "@deepseek-ai/dsh-tool-session-query": "0.1.7-rc.2",
-    "@deepseek-ai/dsh-tool-subagent": "0.1.7-rc.2"
+    "dsh-miopiik-capabilities": "^0.4.0",
+    "dsh-miopiik-checkpoint": "^0.4.0",
+    "dsh-miopiik-diagnostics": "^0.4.0",
+    "dsh-miopiik-learn": "^0.4.0",
+    "dsh-miopiik-magic-keywords": "^0.4.0",
+    "dsh-miopiik-policy": "^0.4.0",
+    "dsh-miopiik-run-stats": "^0.4.0",
+    "dsh-miopiik-tool-recovery": "^0.4.0"
   }
 }

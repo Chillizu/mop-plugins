@@ -30,8 +30,17 @@
 - id: subagent-spawn-in-process
   name: '@deepseek-ai/dsh-subagent-spawn-in-process'
 
+- id: session-projection
+  name: '@deepseek-ai/dsh-session-projection'
+
+- id: sandbox
+  name: '@deepseek-ai/dsh-sandbox-local'
+
 - id: sandbox-policy
   name: '@deepseek-ai/dsh-sandbox-policy'
+  config:
+    mode: workspace-write
+    workspaceRoot: '/tmp/mop-composition-workspace'
 
 - id: fs-sandbox
   name: '@deepseek-ai/dsh-fs-sandbox'
@@ -94,7 +103,6 @@
     toolName: subagent_execute
     backgroundMode: one-shot
     enableRunInBackground: false
-    modelSelectionSettings: true
     maxDepth: 2
 
 - id: dsh-miopiik-policy

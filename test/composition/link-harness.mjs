@@ -32,6 +32,12 @@ const FIXTURE_LINKS = [
   ['@deepseek-ai', 'dsh-tools', 'packages/core/tools'],
   ['@deepseek-ai', 'dsh-system-prompt', 'packages/core/system-prompt'],
   ['@deepseek-ai', 'dsh-session', 'packages/core/session'],
+  [
+    '@deepseek-ai',
+    'dsh-session-projection',
+    'packages/session/session-projection',
+  ],
+  ['@deepseek-ai', 'dsh-sandbox-local', 'packages/sandbox/sandbox-local'],
   ['@deepseek-ai', 'dsh-agent', 'packages/core/agent'],
   ['@deepseek-ai', 'dsh-subagent', 'packages/subagent/subagent'],
   [
