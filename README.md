@@ -6,7 +6,7 @@ MiOpIIk workflow and recovery extensions for DeepSeek Harness (DSH).
 
 ## 兼容版本
 
-本次 `0.3.1` 按当前官方发布组合对齐：DSH 核心 `0.1.7-rc.2`；官方独立工具包 `@deepseek-ai/dsh-tool-subagent` 和 `@deepseek-ai/dsh-tool-session-query` 均为 `0.1.7-rc.2`。工具包的 npm 版本号与 DSH 核心版本号不同，依赖按各自发布版本锁定。`0.3.0` 的公开版本不可覆盖，已由 `0.3.1` 修正。
+`0.4.0` 对齐 DSH `0.2.0-rc.2`。MiOpIIk 不再把 DSH 原生 `dsh-tool-subagent` / `dsh-tool-session-query` 作为 suite 的 npm dependencies；这些能力由宿主 DSH profile 提供，避免安装第二套旧 DSH runtime。MiOpIIk 插件只以 `^0.2.0-rc.2` peer contract 消费宿主的 `dsh-tools` / `dsh-llm`。
 
 官方能力依据：[DSH subagent tool](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/subagent/tool-subagent)、[session-query subsystem](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/session-query.md)、[DSH skills](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/skills.md)。
 
@@ -17,7 +17,7 @@ dsh plugin --profile <profile> add dsh-miopiik
 npx dsh-miopiik
 ```
 
-安装后由 DSH 重载对应 profile。`dsh-miopiik` 套件会装配 MiOpIIk 的恢复、策略与诊断插件，以及官方会话查询插件；子代理模型设置由 DSH 宿主原生提供。preset 模板位于 `examples/miopiik/`。
+安装后由 DSH 重载对应 profile。`dsh-miopiik` 套件会装配 MiOpIIk 的恢复、策略与诊断插件，；会话查询、子代理及其模型设置均由 DSH 宿主原生提供。preset 模板位于 `examples/miopiik/`。
 
 从 `0.2.x` 升级时，先检查 profile 插件清单并移除旧的 `dsh-miopiik-executor`、`dsh-miopiik-model-auth`、`dsh-miopiik-recall` 行，再安装新版套件。此前发布的 npm 版本保留并标记为已被 DSH 原生能力取代；不能通过 npm 删除已发布版本。
 

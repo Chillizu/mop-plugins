@@ -16,7 +16,7 @@
 | `npm run format:check`           | Prettier；preset YAML 的源与打包副本保留逐字一致                                             |
 | `bash tools/verify-crossrefs.sh` | 文档相对链接检查                                                                             |
 | `npm test`                       | 单测；通过 `test/register-mocks.mjs` stub DSH workspace 模块                                 |
-| `npm run test:composition`       | 可选真实 Loader 集成检查；需要 DSH 0.1.7-rc.2 源码 checkout，见 `test/composition/README.md` |
+| `npm run test:composition`       | 可选真实 Loader 集成检查；需要 DSH 0.2.0-rc.2 源码 checkout，见 `test/composition/README.md` |
 
 ## 代码约定
 

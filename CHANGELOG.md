@@ -5,6 +5,20 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-04
+
+### Changed
+
+- 对齐 DSH `0.2.0-rc.2` 的真实 Loader 服务图，Composition fixture 补齐 `session-projection` 与新版 sandbox provider。
+- `dsh-miopiik` 不再直接依赖原生 `dsh-tool-subagent` / `dsh-tool-session-query`，避免在 DSH 0.2 宿主中嵌套安装旧 0.1.7 runtime。
+- MiOpIIk 的 DSH peer contract 更新为 `^0.2.0-rc.2`；内部 MiOpIIk 包统一升至 `0.4.0`。
+- Composition 的 pinned DSH snapshot 更新到官方 `dsh-v0.2.0-rc.2` (`639ed015397290b3745d163aafe02ffee4aa3f84`)。
+- Loader smoke 不再在无 scoped preset Context 的 leaf fixture 中开启 `modelSelectionSettings`；正式 preset 继续通过 Host scope 提供该能力。
+
+### Validation
+
+- 单元测试、语法检查、ESLint、Prettier 与 DSH `0.2.0-rc.2` 真实 Loader Composition 全绿。
+
 ## [0.3.1] - 2026-09-28
 
 ### Fixed

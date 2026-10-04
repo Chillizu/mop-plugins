@@ -1,7 +1,7 @@
 {
   "name": "dsh-miopiik-policy",
   "description": "MiOpIIk fail-closed route requirement for the native DSH subagent tool",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "type": "module",
   "main": "index.js",
   "exports": {
@@ -19,7 +19,7 @@
     }
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-tools": "0.1.7-rc.2"
+    "@deepseek-ai/dsh-tools": "^0.2.0-rc.2"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/dsh-tools": {

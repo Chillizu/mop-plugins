@@ -29,7 +29,7 @@ jobs:
       fail-fast: false
       matrix:
         dsh_ref:
-          - '47f943859bef60e4160492346772ded9b24f765a' # PINNED (gate)
+          - '639ed015397290b3745d163aafe02ffee4aa3f84' # PINNED (gate)
           - 'master' # upstream drift warning (non-gating)
     steps:
       - name: Checkout mop-plugins
