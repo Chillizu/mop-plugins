@@ -10,7 +10,7 @@
 #
 # NOTE: this clean fixture holds only harness services (no mop packages), so the
 # spawn-driver / Loader-default assertions stay independent of mop Config
-# services. Retained MiOpIIk plugins are mounted separately in cordis.with-mop.yml; see
+# services. Retained MiOpIIk plugins are mounted separately in cordis.with-agent-rewind.yml; see
 # composition.test.mjs.
 #
 # The spawn row carries NO config on purpose: assertion ① proves the Loader

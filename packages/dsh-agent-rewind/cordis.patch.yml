@@ -1,0 +1,10 @@
+# dsh-agent-rewind bundle patch —— 命名恢复账本（checkpoint / rewind / list）。
+#
+# 单行 insert；`id` 是去 scope 的短行名，`name` 是完整模块 specifier（与 DSH 官方
+# patch 同形，如 dsh-experimental-agent-team-profile）。写成短名会 import 失败。
+#
+# 套件 dsh-session-policy 的 patch 也挂同一行（同一 id + 同一 name）——两处一致，
+# 单独安装本包或一把安装套件都能装上账本。
+- insert:
+    - id: dsh-agent-rewind
+      name: 'dsh-agent-rewind'

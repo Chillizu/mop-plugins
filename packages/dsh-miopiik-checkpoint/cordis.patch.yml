@@ -1,7 +1,0 @@
-# dsh-miopiik-checkpoint compatibility patch.
-# 0.2 default dsh-miopiik no longer mounts this row because
-# dsh-miopiik-tool-recovery owns auto-turn / auto-error. Keep this package
-# individually installable for 0.1.x-style deployments during the migration window.
-- insert:
-    - id: dsh-miopiik-checkpoint
-      name: dsh-miopiik-checkpoint

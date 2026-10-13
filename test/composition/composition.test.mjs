@@ -5,34 +5,39 @@ import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { join, dirname } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { ensureLinks, HARNESS_ROOT } from './link-harness.mjs'
+import { ensureLinks, bootEntry, HARNESS_MODE } from './link-harness.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const CONFIG = join(here, 'cordis.yml')
-const CONFIG_WITH_MOP = join(here, 'cordis.with-mop.yml')
-const CONFIG_WITH_RUN_STATS = join(here, 'cordis.with-run-stats.yml')
-const CONFIG_MIOPIIK = join(here, 'cordis.miopiik-example.yml')
+const CONFIG_WITH_RETAINED = join(here, 'cordis.with-agent-rewind.yml')
+const CONFIG_EXAMPLE = join(here, 'cordis.agent-rewind-example.yml')
 
-/** The real boot entry: packages/boot/app-boot/src/index.ts:757 (built lib). */
+/**
+ * The real boot entry: app-boot/lib/index.js — from a built DSH source checkout
+ * when one is present, otherwise from the installed DSH distribution
+ * (HARNESS_MODE 'source' | 'installed').
+ */
 let boot
 let ctx
 
 before(async () => {
   ensureLinks()
-  boot = (
-    await import(
-      pathToFileURL(join(HARNESS_ROOT, 'packages/boot/app-boot/lib/index.js'))
-        .href
-    )
-  ).boot
+  boot = (await import(pathToFileURL(bootEntry()).href)).boot
   // boot(binName, absoluteConfigPath) mounts the leaf config through the real
   // Loader and settles the tree (app-boot/src/index.ts:757; template in
   // app-boot/tests/app-boot.spec.ts:548).
-  ctx = await boot('mop-composition', CONFIG)
+  ctx = await boot('agent-rewind-composition', CONFIG)
 })
 
 after(async () => {
   await ctx?.fiber.dispose()
+})
+
+test('harness source is either a built checkout or an installed distribution', () => {
+  assert.ok(
+    HARNESS_MODE === 'source' || HARNESS_MODE === 'installed',
+    `composition tests need a harness (mode=${HARNESS_MODE})`,
+  )
 })
 
 test('Loader coerces a Config schema default into apply(config)', () => {
@@ -70,51 +75,36 @@ test('real spawn driver throws TypeError when a start request lacks signal', asy
   )
 })
 
-test('real Loader mounts retained MiOpIIk plugins and optional keyword config', async () => {
-  const ctx2 = await boot('mop-composition', CONFIG_WITH_MOP)
+test('real Loader mounts both retained MiOpIIk packages', async () => {
+  const ctx2 = await boot('agent-rewind-composition', CONFIG_WITH_RETAINED)
   try {
     const entries = [...ctx2.loader.entries()]
-    const recovery = entries.find(
-      (entry) => entry.options.id === 'dsh-miopiik-tool-recovery',
-    )
-    assert.ok(recovery, 'MiOpIIk recovery entry must be mounted and active')
-    const diagnostics = entries.find(
-      (entry) => entry.options.id === 'dsh-miopiik-diagnostics',
-    )
-    assert.ok(
-      diagnostics,
-      'MiOpIIk diagnostics entry must be mounted and active',
-    )
-    const kw = entries.find(
-      (entry) => entry.options.id === 'dsh-miopiik-magic-keywords',
-    )
-    assert.ok(kw, 'optional keyword plugin must be mounted in this fixture')
-    assert.ok(kw.fiber.config.notices.ultrathink)
-    assert.ok(kw.fiber.config.notices.workflowz)
+    for (const id of ['dsh-session-policy', 'dsh-agent-rewind']) {
+      const entry = entries.find((candidate) => candidate.options.id === id)
+      assert.ok(entry && entry.fiber, `${id} entry must be mounted and active`)
+    }
+    // 五个工具经真实 ToolRuntime 注册（挂载 ≠ 工具在场，必须逐个查）。
+    for (const toolName of [
+      'agent_checkpoint',
+      'agent_rewind',
+      'agent_checkpoint_list',
+      'session_rule',
+      'session_doctor',
+    ]) {
+      assert.ok(ctx2.tools.get(toolName), `${toolName} must be registered`)
+    }
   } finally {
     await ctx2.fiber.dispose()
   }
 })
 
-test('run-stats: real Loader 挂载 + tokenUsage 投影零桶锚', async () => {
-  // 契约锚：dsh-miopiik-run-stats 依赖「tokenMeter 挂载后 tokenUsage 投影恒存在（零桶），
-  // undefined 只 = tokenMeter 未挂载」。此处用真实 token-meter + session-projection
-  // 证明 Config z.object({}) 过真实 Loader、dsh-miopiik-run-stats 硬 inject tools、
-  // 且空 session 的 snapshot 里 tokenUsage 键确实注册为零桶（非 undefined）。
-  const ctx3 = await boot('mop-composition', CONFIG_WITH_RUN_STATS)
+test('session_doctor(stats) 零桶锚：真实 token-meter 挂载后 tokenUsage 投影存在（零桶）', async () => {
+  // 契约锚（原 run-stats 锚点，现服务 session_doctor mode="stats"）：tokenMeter 挂载后
+  // tokenUsage 投影恒存在（零桶），undefined 只意味着 tokenMeter 未挂载 —— 这正是
+  // 运行时 "live 会话无 tokenUsage 时不得转 cold 兜底" 判据的前提。
+  const ctx3 = await boot('agent-rewind-composition', CONFIG_WITH_RETAINED)
   try {
-    const entries = [...ctx3.loader.entries()]
-    const rs = entries.find(
-      (entry) => entry.options.id === 'dsh-miopiik-run-stats',
-    )
-    assert.ok(rs, 'dsh-miopiik-run-stats entry must be mounted and active')
-    assert.deepEqual(
-      rs.fiber.config,
-      {},
-      'Config z.object({}) 经 Loader 得空对象',
-    )
-
-    const session = ctx3.sessions.create('run-stats-empty')
+    const session = ctx3.sessions.create('mop-doctor-empty')
     const snap = ctx3.sessionProjections.snapshot(session)
     assert.deepEqual(snap.values.tokenUsage, {
       uncachedInputTokens: 0,
@@ -127,26 +117,22 @@ test('run-stats: real Loader 挂载 + tokenUsage 投影零桶锚', async () => {
   }
 })
 
-test('MiOpIIk 层挂载 smoke：native subagent/query 与 MiOpIIk 扩展经真实 Loader 可挂载', async () => {
-  // 证明 MiOpIIk 0.2 默认层（收敛域 + planner/supervisor 层派发行）的 inject 联合被
-  // 真实 DSH 服务满足、可整体挂载——而不只是各自 mock register。persona 行不在本
-  // fixture（需 agent-scoped context），由真实 dsh 会话的 standingKeyFor 验证。
-  const ctx4 = await boot('mop-composition', CONFIG_MIOPIIK)
+test('MiOpIIk 层挂载 smoke：两包经真实 Loader 可挂载', async () => {
+  // 证明瘦身后的 inject 联合（tools / fs / sandboxPolicy / sessions /
+  // sessionPersistence）被真实 DSH 服务满足，且两个包经真实 Loader 整体挂载、
+  // 五个工具全部在场。
+  const ctx4 = await boot('agent-rewind-composition', CONFIG_EXAMPLE)
   try {
     const entries = [...ctx4.loader.entries()]
-    for (const id of [
-      'dsh-miopiik-tool-recovery',
-      'dsh-miopiik-diagnostics',
-      'dsh-tool-session-query',
-      'tool-subagent-planner',
-      'tool-subagent-supervisor',
-      'tool-subagent-executor',
-      'dsh-miopiik-policy',
-    ]) {
-      const entry = entries.find((e) => e.options.id === id)
+    for (const id of ['dsh-session-policy', 'dsh-agent-rewind']) {
+      const entry = entries.find((candidate) => candidate.options.id === id)
       assert.ok(entry && entry.fiber, `${id} entry must be mounted and active`)
     }
-    assert.ok(ctx4.tools.get('subagent_execute'))
+    assert.ok(ctx4.tools.get('agent_checkpoint'))
+    assert.ok(ctx4.tools.get('agent_rewind'))
+    assert.ok(ctx4.tools.get('agent_checkpoint_list'))
+    assert.ok(ctx4.tools.get('session_rule'))
+    assert.ok(ctx4.tools.get('session_doctor'))
   } finally {
     await ctx4.fiber.dispose()
   }

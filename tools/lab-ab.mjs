@@ -11,7 +11,7 @@
 // --group 模式下按组聚合均值，便于 standard vs miopiik 直接对比。
 //
 // 注意：token 取自 session.jsonl 内的 `usage` 事件（provider 口径）；
-// 若导出的 jsonl 不含 usage，则该列显示 0（可改用 mop_run_stats(sessionId) 取 live 值）。
+// 若导出的 jsonl 不含 usage，则该列显示 0（可改用 agent_run_stats(sessionId) 取 live 值）。
 
 import { readFileSync } from 'node:fs'
 
@@ -92,7 +92,7 @@ function analyze(path) {
           const n = b.name
           if (
             [
-              'mop_spawn_executor',
+              'agent_spawn_executor',
               'subagent',
               'subagent_fork',
               'subagent_planner',

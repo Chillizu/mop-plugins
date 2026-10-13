@@ -1,59 +1,140 @@
 # mop-plugins
 
-MiOpIIk workflow and recovery extensions for DeepSeek Harness (DSH).
+MiOpIIk：DeepSeek Harness（DSH）的**策略到执行适配层**。原生优先——DSH 已经正面提供的能力，本仓库永不实现。
 
-**定位：** MiOpIIk 提供自己的协作 persona、工作流约束、规则注入、检查点与恢复能力。子代理生命周期、会话级模型授权、会话检索、技能发现/加载、插件装配由 DSH 原生能力负责；MiOpIIk 只对执行层增加一条策略：`subagent_execute` 必须显式给出非空 `provider` 和 `model`，随后仍由 DSH 原生工具校验会话授权并运行子代理。
+对齐 DSH `0.2.0-rc.2`。
 
-## 兼容版本
+## 定位
 
-`0.4.1` 对齐 DSH `0.2.0-rc.2`。DSH 宿主在 `0.2.0-rc.2` 内置 `dsh-tool-subagent`，但**不内置** `dsh-tool-session-query`——该包发布在 npm、不随 harness 安装，缺它会让套件 patch 的会话查询行无法导入。因此套件把 `@deepseek-ai/dsh-tool-session-query` 保留为 `^0.2.0-rc.2` 的 npm dependency（与宿主同版本，不嵌套旧 `0.1.7` runtime）；子代理、模型授权、技能加载由宿主提供。MiOpIIk 插件只以 `^0.2.0-rc.2` peer contract 消费宿主的 `dsh-tools` / `dsh-llm`。
+MiOpIIk 起初想做「运行时机制的提供者」——自造 executor、模型授权闸、会话检索、检查点、技能创作。这条路线在 DSH 0.2 / 0.2.1 已被上游系统性收编：Agent Teams 提供命名成员 + durable 消息 + 共享任务板，`session-checkpoint-policy` 提供崩溃前落盘，会话检索、技能目录与加载、token 投影、审批与权限预设全部内建。继续维护这些等于与上游对着干，每轮对齐都是把删掉的东西再删一遍。
 
-官方能力依据：[DSH subagent tool](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/subagent/tool-subagent)、[session-query subsystem](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/session-query.md)、[DSH skills](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/skills.md)。
+所以定位收缩为：
+
+> **MiOpIIk 不是一个功能插件，是一层「策略到执行的适配层」。**
+>
+> - **策略**（本体）：证据优先、授权闸、成本敏感、独立验收等工作纪律，落在 preset / persona 与 DSH 原生配置里。**这部分不写代码**，它才是不可替代的东西。
+> - **适配**（本仓库的两个包）：DSH **刻意**保持「有原语、无模型面」的少数几处，给模型开一条窄缝。
+
+**任何「DSH 没有所以我实现一个」的冲动，先反问「上游是不是刻意不做」——是，就别做。**
+
+### DSH 的刻意分离（这是尺子）
+
+上游的定式是**原语与模型面分离**，而且分离是刻意的——README 自己写明：
+
+| DSH 能力                      | 原生模型面              | 上游的明示                                  |
+| ----------------------------- | ----------------------- | ------------------------------------------- |
+| `sessions.fork`               | 无（只有 Web GUI 按钮） | 三层调用者全是宿主/客户端                   |
+| `systemPrompt.section`        | **无**                  | 「there is no end-user prompt-editing API」 |
+| `tokenUsage` / `sessionStats` | **无**                  | 「registers nothing model-facing」          |
+| `cordis_inspect_*`            | **有**                  | ——                                          |
+
+所以「补一层模型面」是正当的，但必须承认它是在给一扇刻意关上的门开缝：**只开确实需要的缝，缝要窄到不可再窄，永不复制原语（只调 `ctx.*`）。**
+
+## 两个包
+
+### `dsh-agent-rewind` — 会话的命名恢复账本
+
+DSH 有 `ctx.sessions.fork(source, boundary)` 这个原语，但**没有任何模型可见的 fork 工具**（三层：宿主 Service → 宿主 Remote → Web GUI 按钮，都对模型关闭），也没有「把历史某一轮命名」的持久索引。这个包就补这一条缝。
+
+| 工具                    | 参数                            | 行为                                                                                                                        |
+| ----------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `agent_checkpoint`      | `label!`, `note?`, `sessionId?` | 取目标会话最后一个 `turn/end` 的 seq 作 inclusive 边界，追加一行到 `<cwd>/.dsh/memory/checkpoints.md`；超过阈值自动裁最旧行 |
+| `agent_rewind`          | `sessionId!`, `label!`          | 按 label 查最新一条，校验归属后 fork 出子会话并返回其 id（热/冷两条路径）                                                   |
+| `agent_checkpoint_list` | —                               | 列出可解析的现行格式检查点行                                                                                                |
+
+无工具面：根会话每轮追加 `auto-turn` 行、出错追加 `auto-error` 行（恢复遥测——写失败只 warn，绝不让轮次关闭失败）。
+
+**冷路径用 DSH 公开的 `buildForkSeed`** 构造 seed：它负责给未闭合的尾巴补合成闭合事件（`session/end-seed` + `step/end` + `turn/end`）。少了这一步会 fork 出结构未闭合的子会话。
+
+> **与 npm 上的第三方包 `dsh-rewind` 不是同一件事**：那个是人在 Web 里敲的 `/rewind` 斜杠命令、用 git 快照恢复**工作区文件**；本包是**模型自己调用**的工具、用 DSH 原生 fork 恢复**会话事件流**。机制、调用者、恢复对象全都不同，互为补充。
+
+### `dsh-session-policy` — 会话级硬规则 + 诊断
+
+| 工具             | 参数                                   | 行为                                                                                                      |
+| ---------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `session_rule`   | `action!∈inject\|show\|clear`, `text?` | 注入 / 查看 / 撤销**只在当前会话生效**的硬规则（经 `agent.ctx.systemPrompt.section`），零文件、可一键撤销 |
+| `session_doctor` | `mode!∈seams\|stats`, `sessionId?`     | `seams`：**实调**探测 DSH seam 并落盘 `.dsh/memory/capabilities.md`；`stats`：读 `tokenUsage` 投影四桶    |
+
+`session_rule` 补的缝：`AGENTS.md` 是**持久 + 跨会话 + 全局**语义，替代不了「本会话生效 + 可撤销」。
+
+`session_doctor(seams)` 相对原生 `cordis_inspect_*` 的真实增量：后者只给 **API 形状**且明文「cannot invoke business Service methods」；本工具给出**实调证据**（真调 `sessions.list()`、`sessionPersistence.open()+read()`）并把清单**落盘**供全队与人类复核。
+
+## 命名
+
+**包名与工具名一一对应，不再有 `mop_` 前缀。**
+
+- 工具名前缀 = 它所属包的职责：账本包 → `agent_*`，策略包 → `session_*`。
+- 这与 DSH 官方先例同形：包 `dsh-tool-session-query` → 工具 `session_*`。
+- 包名保留 `dsh-` 前缀。**不要**用无前缀的 `agent-rewind` / `agent-checkpoint`——npm 上均已被同类项目占用，按「不代替已存在的」原则避开。
 
 ## 安装
 
 ```bash
-dsh plugin --profile <profile> add dsh-miopiik
-npx dsh-miopiik
+dsh plugin --profile <profile> add dsh-session-policy
 ```
 
-安装后由 DSH 重载对应 profile。`dsh-miopiik` 套件会装配 MiOpIIk 的恢复、策略与诊断插件，并挂载官方会话查询工具 `@deepseek-ai/dsh-tool-session-query`（随套件依赖一并安装）；子代理及其模型设置由 DSH 宿主原生提供。preset 模板位于 `examples/miopiik/`。
+`dsh-session-policy` 声明依赖 `dsh-agent-rewind`，一条命令两个包一起装好。重启后由 DSH 重载 profile。
 
-从 `0.2.x` 升级时，先检查 profile 插件清单并移除旧的 `dsh-miopiik-executor`、`dsh-miopiik-model-auth`、`dsh-miopiik-recall` 行，再安装新版套件。此前发布的 npm 版本保留并标记为已被 DSH 原生能力取代；不能通过 npm 删除已发布版本。
+### 从 0.4.x 升级（破坏性）
 
-## 工具与能力
+0.5.0 删除了 8 个包、改动了全部工具名。**必须先清理旧行**：
 
-| 来源           | 工具/能力                                                                                                                           | 归属                                                                      |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| DSH 原生       | `subagent`、`subagent_fork`、`subagent_plan`、`subagent_supervise`、`subagent_execute`                                              | 通用派发、模型选择与子代理生命周期                                        |
-| DSH 原生       | `session_search`、`session_event_search`、`session_trace`、`session_event_trace`、`session_event_read`                              | 历史会话检索与读取                                                        |
-| DSH 原生       | skill filesystem 自动生成的可用技能目录，以及 `skill` 加载工具                                                                      | 技能目录、发现和加载                                                      |
-| MiOpIIk        | 执行策略守卫                                                                                                                        | `subagent_execute` 要求显式 `provider` + `model`；授权由 DSH 原生设置检查 |
-| MiOpIIk        | `mop_checkpoint`、`mop_checkpoint_list`、`mop_checkpoint_prune`、`mop_rewind`、`mop_rule_inject`、`mop_rule_show`、`mop_rule_clear` | 检查点、恢复与会话规则                                                    |
-| MiOpIIk        | `mop_probe_capabilities`、`mop_run_stats`                                                                                           | DSH seam 诊断与 token 用量投影                                            |
-| MiOpIIk opt-in | `mop_learn`                                                                                                                         | 将可复用流程写为项目 skill；目录浏览和加载交给 DSH                        |
+1. 从 profile 插件清单移除（若存在）：`dsh-miopiik-tool-recovery`、`dsh-miopiik-diagnostics`、`dsh-miopiik-learn`、`dsh-miopiik-magic-keywords`、`dsh-miopiik-capabilities`、`dsh-miopiik-checkpoint`、`dsh-miopiik-run-stats`、`dsh-miopiik-policy`、`dsh-miopiik-executor`、`dsh-miopiik-model-auth`、`dsh-miopiik-recall`
+2. 删除遗留 preset 目录（DSH 0.2 已不再读取）：`$DSH_HOME/.agent-presets/miopiik/`
+3. 再 `add dsh-session-policy`
 
-子代理名称采用 DSH 的 `subagent_*` 系列，不额外加项目统一前缀。执行层每次必须显式提供 `provider` 和 `model`；候选路由与授权名单来自 DSH 原生模型设置。
+**工具改名对照**：
 
-## 保留的包
+| 0.4.x                                                  | 0.5.0                                                                                        |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| `mop_checkpoint`                                       | `agent_checkpoint`                                                                           |
+| `mop_rewind`                                           | `agent_rewind`                                                                               |
+| `mop_checkpoint_list`                                  | `agent_checkpoint_list`                                                                      |
+| `mop_rule_inject` / `mop_rule_show` / `mop_rule_clear` | `session_rule(action:"inject"\|"show"\|"clear", text?)`                                      |
+| `mop_probe_capabilities`                               | `session_doctor(mode:"seams")`                                                               |
+| `mop_run_stats(sessionId)`                             | `session_doctor(mode:"stats", sessionId)`                                                    |
+| `mop_checkpoint_prune(keep, confirm)`                  | 删除；`agent_checkpoint` 超 `maxCheckpoints`（默认 200）自动裁剪，回报 `; pruned <k> oldest` |
+| `mop_learn`                                            | 删除（原生 `write` + `dsh-skill-filesystem` 已覆盖）                                         |
 
-- `dsh-miopiik`：聚合安装入口与 preset 初始化命令。
-- `dsh-miopiik-tool-recovery`：MiOpIIk 专属 checkpoint、rewind、prune 和规则注入。
-- `dsh-miopiik-policy`：仅要求 `subagent_execute` 明确提供路由；调用授权、执行与生命周期交给 DSH。
-- `dsh-miopiik-diagnostics`：DSH 能力兼容探测和 token 投影读取。
-- `dsh-miopiik-learn`：只保留 `mop_learn` 技能创作工具。
-- `dsh-miopiik-magic-keywords`：可选的提示词关键词 notice 插件。
-- `dsh-miopiik-capabilities`、`dsh-miopiik-run-stats`、`dsh-miopiik-checkpoint`：既有包名兼容入口；默认套件不装载这些行。
+`checkpoints.md` 的**行格式未变**（`- [ISO] label | session=<sid> | seq=<n> [| note]`），历史检查点继续可读、可回溯。
 
-## 发布与开发
+## 退场条件（硬约束）
 
-该仓库使用 npm workspaces，所有保留的公开包按同一版本发布。运行现有检查：
+上游一开就拆，不留兼容层：
+
+- DSH 给 `sessions.fork` 加模型可见工具 → `dsh-agent-rewind` 整体删除
+- DSH 开放会话级提示编辑入口 → `session_rule` 删除
+- DSH 给 token 投影加模型面 → `session_doctor(stats)` 删除
+- ~~DSH 提供「必须显式选路由」模式~~ → `dsh-miopiik-policy` **已于 0.5.0 提前删除**（它守的 `subagent_execute` 是 preset 里的行、不是插件能力；preset 配置归用户）
+
+**每次 DSH 升级的标准动作**：重跑证据核对，被吸收的条目删除。
+
+## 不进入的领域
+
+以下都是 DSH 已经**正面提供**的能力，本仓库永不实现——即使看起来「可以做得更好」：
+
+子代理派发与生命周期、Agent Teams 协作与任务板、模型授权与白名单、会话持久化与崩溃恢复、会话检索与 trace、技能目录/发现/加载、沙箱与审批策略、权限预设、压缩与上下文管理、计划模式、目标与 todo、工作流编排、Ralph 循环、插件清单与配置编辑。
+
+判据：**上游已经做了，做得差也是上游的事。**
+
+## 可选：恢复跨会话检索工具
+
+本仓库不挂载 `@deepseek-ai/dsh-tool-session-query`（它提供模型可见的 `session_search` / `session_event_search` / `session_trace` / `session_event_trace` / `session_event_read`），因为 DSH 的 Agent Teams profile 已自带协作面、与本定位重叠。它仍是官方包，需要时自行加回：
 
 ```bash
-npm run check
-npm run lint
-npm run format:check
-npm test
+dsh plugin --profile <profile> add @deepseek-ai/dsh-tool-session-query
 ```
 
-发布记录见 [CHANGELOG.md](CHANGELOG.md)。历史实验与迁移设计保留在 `docs/`，仅作为对应时期的记录，不代表当前运行时契约。
+## 开发
+
+```bash
+npm run check              # node --check 五个入口
+npm run lint               # eslint（已 ignore .dsh/** 会话工作区）
+npm run format:check       # prettier
+npm test                   # 单元测试（stub 掉 harness 私有包）
+npm run test:composition   # 真实 DSH Loader 挂载验证
+```
+
+真实加载器验证按 `DSH_HARNESS_ROOT` 找 DSH 源码 checkout，缺失时回退到已安装的 DSH 发行版，见 [test/composition/README.md](test/composition/README.md)。
+
+发布记录见 [CHANGELOG.md](CHANGELOG.md)。[docs/](docs/) 下的设计文档是历史决策记录，描述的是当时实现，**不代表当前运行时契约**。

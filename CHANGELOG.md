@@ -1,9 +1,80 @@
 # Changelog
 
 所有对外可见的变更记录在本文件。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
-版本号遵循 SemVer；同一 release train 中实际发布的 `dsh-miopiik-*` 包 + 套件包 `dsh-miopiik` 采用 **lockstep 版本**（同号同发）。
+版本号遵循 SemVer；同一 release train 中实际发布的包采用 **lockstep 版本**（同号同发）。
 
 ## [Unreleased]
+
+## [0.5.0] - 2026-10-13
+
+**破坏性重定位：原生优先（native-first）。** 本版删除绝大多数功能并重新切分包边界，理由是 DSH `0.2.0-rc.2` 已经原生提供它们。判据与取证见 [docs/design/0.5-repositioning.md](docs/design/0.5-repositioning.md)。
+
+### 判定依据（逐条取证，非印象）
+
+对已安装 DSH `0.2.0-rc.2` 的 `README.md` / `lib/types/*.d.ts` / 源码逐项核对，并用活运行时 `cordis_inspect_query(host, Tool, listTools)` 取「模型可见工具全集」作第一手判据：
+
+- 原生模型可见工具里**没有**任何 fork / checkpoint / rewind / rule / token / probe 类工具 → 这几类是真实空档。
+- `ctx.sessions.fork` 与宿主 Remote `session.fork({sessionId, atSeq?})` 都存在，但三层（Service → Remote → Web GUI 按钮）**都对模型关闭** → 恢复账本不可替代。
+- `dsh-experimental-agent-team-profile`（用户 profile 已启用）提供命名成员、durable 消息、共享任务板，并显式 `disabled: true` 掉 `tool-subagent` / `tool-subagent-fork` → MiOpIIk 的「三层 + 监督层协作协议」整块定位已被取代。
+- `dsh-session-checkpoint-policy` 是**崩溃前落盘**语义，与命名检查点不是一回事（勿混同）。
+- `dsh-token-meter` 的 `tokenUsage` / `dsh-session-stats` 的 `sessionStats` 上游 README 明写 "registers nothing model-facing" / "None" → `session_doctor(stats)` 是唯一模型可见路径。
+- `dsh-system-prompt` README 明写 "there is no end-user prompt-editing API" → 会话级规则注入是**刻意关闭**的门。
+
+### Changed — 包边界重切（9 包 → 2 包）
+
+| 包                                            | 职责                                                  | 模型可见工具                                                  |
+| --------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------- |
+| `dsh-agent-rewind`（新，无 scope）            | 会话的命名恢复账本：共享 `.dsh/memory/checkpoints.md` | `agent_checkpoint` / `agent_rewind` / `agent_checkpoint_list` |
+| `dsh-session-policy`（由 `dsh-miopiik` 改名） | 会话级硬规则 + 诊断                                   | `session_rule` / `session_doctor`                             |
+
+- `dsh-session-policy` 声明 `dependencies: { "dsh-agent-rewind": "^0.5.0" }`，一条 `add dsh-session-policy` 两包一起装。
+- 两个包均 `version 0.5.0`，lockstep。
+
+### Changed — 命名统一（消灭 `mop_` 前缀）
+
+历史上包名用 `miopiik`、工具名用 `mop_` 前缀——**同一个词的两个缩写并存**，纯冗余。现统一：工具名前缀 = 所属包职责，与 DSH 官方先例同形（包 `dsh-tool-session-query` → 工具 `session_*`）。
+
+| 0.4.x                                                  | 0.5.0                                                   |
+| ------------------------------------------------------ | ------------------------------------------------------- |
+| `mop_checkpoint`                                       | `agent_checkpoint`                                      |
+| `mop_rewind`                                           | `agent_rewind`                                          |
+| `mop_checkpoint_list`                                  | `agent_checkpoint_list`                                 |
+| `mop_rule_inject` / `mop_rule_show` / `mop_rule_clear` | `session_rule(action:"inject"\|"show"\|"clear", text?)` |
+| `mop_probe_capabilities`                               | `session_doctor(mode:"seams")`                          |
+| `mop_run_stats(sessionId)`                             | `session_doctor(mode:"stats", sessionId)`               |
+
+包名**不用**无前缀的 `agent-rewind` / `agent-checkpoint`：npm 上均已被同类项目占用（`agent-rewind` 的描述即 "Flight recorder + undo button for AI agents"），按「不代替已存在的」原则避开。
+
+### Removed（8 个包，不做兼容 shim）
+
+- 删除 `dsh-miopiik-tool-recovery`、`dsh-miopiik-diagnostics`、`dsh-miopiik-learn`、`dsh-miopiik-magic-keywords`、`dsh-miopiik-capabilities`、`dsh-miopiik-checkpoint`、`dsh-miopiik-run-stats`、`dsh-miopiik-policy`。已发布版本保留在 npm，但不提供转发包；升级须先清理 profile 旧行。
+- 模型可见工具 11 → 5：删除 `mop_learn`（原生 `write` + `dsh-skill-filesystem` 已覆盖，写后下一模型步骤即入目录）、`mop_checkpoint_prune`（并入 `agent_checkpoint` 自动裁剪）、`mop_probe_capabilities` / `mop_run_stats`（并入 `session_doctor` 两个 mode）、`mop_rule_*` 三个（并入 `session_rule`）。
+- **`dsh-miopiik-policy` 整体删除**：它守的 `subagent_execute` 是 **preset 里的行**，不是插件能力。preset 配置归用户、本套件不再代管 → 守卫默认空转。按原生优先原则，「为不存在的行准备的守卫」就是重叠面。需要强制显式路由时用 DSH 原生 `modelSelectionSettings` + `allowedModels` 白名单。
+- **不再挂载 `@deepseek-ai/dsh-tool-session-query`**：DSH Agent Teams profile 已自带协作面。该包也不再列为 optional 依赖（声明却不挂载会产生幽灵依赖），需要时一行 `add` 自行加回。
+- **不再代管 agent preset**：DSH 0.2 起 preset 是 `@deepseek-ai/dsh-agent-preset` 的声明行，旧的 `$DSH_HOME/.agent-presets/<id>/` 目录已无人读取。删除 `preset/`、`examples/miopiik/` 与 `bin/dsh-miopiik-init.mjs`。
+
+### Fixed
+
+- **冷路径回溯产生未闭合子会话**：`agent_rewind` 的冷会话分支原来直接把 `events.slice(0, seq+1)` 当 seed 交给 `sessions.create`，而**热路径**走 `sessions.fork` → 内部用 `buildForkSeed` 补合成闭合事件。当边界落在 turn/step 中间时，冷路径 fork 出的子会话结构未闭合（缺 `session/end-seed` / `step/end` / `turn/end`，未匹配的 tool call 也没有结果）。现改用 DSH 公开的 `@deepseek-ai/dsh-session/fork` 的 `buildForkSeed`（与第一方 `dsh-api-session-controller` 同一导入路径），`inheritedEventCount` 只计继承前缀。两条成对回归锚：边界未闭合（补 3 条）与边界恰好闭合（只补 fork 切割标记）。
+- **检查点静默丢失**：旧 `appendCheckpoint` 在 `checkpoints.md` 不以换行结尾时会把新行粘在末行尾部，该行无法被解析、检查点静默失效。现补分隔换行。
+- **能力清单谎报在场**：`probe` 的 `presenceOnly` 以 `typeof fn === 'function'` 判定，而「成对原语」判据传的是预算好的布尔 → 被一律判成 false；且 `sessionQuery.filterSessions/filterEvents` 只检查前者。现改为接收**谓词**并要求两者都在。
+- `agent_checkpoint` 显式传空 `sessionId` 不再静默打到自己会话，改为报错；事件流不可读时报错而非当作 seq 0。
+- `agent_rewind` 归属校验改为前缀不敏感（冷会话也生效）；fork 目标取检查点记录的真实 session id。
+- `session_rule` 的 `show` / `clear` 也要求存在调用会话；`inject` 先 dispose 旧 section 再注册，注册失败时状态清干净。
+- `session_doctor(stats)` 全零桶时输出 `allZero: true` + `note`（提示应判 INCONCLUSIVE 而非 PASS）；`sessionProjections` 在场但缺 `snapshot()` 时给出可诊断错误而非原始 `TypeError`。
+- 测试基建三处真空通过：`import only declared modules` 未归一化子路径导入；`release-version` 的 `publicWorkspaceManifests()` 按 `^dsh-` 过滤会漏掉 scoped 包；两个既有测试均缺反向自检。
+
+### Kept（未变契约）
+
+- `checkpoints.md` 行格式 `- [ISO] label | session=<sid> | seq=<n> [| note]` 未变；历史检查点继续可读、可回溯。
+- `seq` 仍是 **inclusive** 边界；`inheritedEventCount` 只计继承前缀，`buildForkSeed` 的合成闭合事件在它之外。
+- 自动检查点阈值默认 200，只裁可被现行正则解析的行；注释/空行/旧格式/散文永不删除。
+
+### Validation
+
+- `npm run check`、`npx eslint packages test tools`、`npx prettier --check .`、`tools/verify-crossrefs.sh` 全绿。
+- `npm test` 覆盖两个包的 5 个工具、事件面、纯 helper 与真实 Loader 挂载。
+- `npm run test:composition` 经真实 DSH Cordis Loader 挂载两包并断言 5 个工具在场。
 
 ## [0.4.1] - 2026-10-13
 

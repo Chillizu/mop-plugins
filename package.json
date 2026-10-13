@@ -1,7 +1,7 @@
 {
   "name": "mop-plugins",
-  "description": "mop-plugins：DeepSeek Harness（DSH）单职责插件集（npm workspaces monorepo）",
-  "version": "0.1.1",
+  "description": "mop-plugins：DeepSeek Harness（DSH）原生优先的恢复与策略插件（npm workspaces monorepo）",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -18,11 +18,13 @@
   "scripts": {
     "test": "node --import ./test/register-mocks.mjs --test --test-isolation=none \"test/*.test.js\"",
     "test:composition": "node --test \"test/composition/*.test.mjs\"",
-    "check": "node --check packages/dsh-miopiik-tool-recovery/index.js && node --check packages/dsh-miopiik-policy/index.js && node --check packages/dsh-miopiik-magic-keywords/index.js && node --check packages/dsh-miopiik-diagnostics/index.js && node --check packages/dsh-miopiik-capabilities/index.js && node --check packages/dsh-miopiik-learn/index.js && node --check packages/dsh-miopiik-run-stats/index.js && node --check packages/dsh-miopiik-checkpoint/index.js && node --check packages/dsh-miopiik/bin/dsh-miopiik-init.mjs",
+    "check": "node --check packages/dsh-agent-rewind/index.js && node --check packages/dsh-agent-rewind/ledger.js && node --check packages/dsh-session-policy/index.js && node --check packages/dsh-session-policy/session-rules.js && node --check packages/dsh-session-policy/diagnostics.js",
     "lint": "eslint .",
     "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "@deepseek-ai/dsh-session": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-tools": "0.2.0-rc.2",
     "@deepseek-ai/schemastery": "3.18.4",
     "@eslint/js": "^9.0.0",
     "eslint": "^9.0.0",
