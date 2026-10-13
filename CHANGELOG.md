@@ -28,7 +28,12 @@
   只读自检（读 `tools.schemas()`，发现违规**如实报告而不抛错**）。`test/composition/`
   新增真实 Loader 挂载 + 真实投影面实跑审计的验证。
 
-  发布后实测：web profile 真实工具面 **42 个工具全部通过契约校验**（object-root、
+  发布状态：**已暂存、待 2FA 审批**。`npm publish` 退出码为 0 但未公开——
+  registry 上只有 `0.0.0-stage` 占位，`dist-tags.latest` 尚未指向 `0.1.0`，公开安装会 404。
+  原因见 `CONTRIBUTING.md` 的「npm 陷阱」第 3 条（无 2FA proof-of-presence 的 token 会被 npm 转入
+  staged publishing）。本机安装不受影响：web profile 走 `link:` 指向工作区，与 npm 无关。
+
+  发布前实测：web profile 真实工具面 **42 个工具全部通过契约校验**（object-root、
   无 null 类型、`required ⊆ properties`）。
 
   > 与已删除的第三方 `mop-probe` **不是同一份实现**：那是 `/tmp/mop-probe` 软链进 web

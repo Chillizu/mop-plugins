@@ -64,6 +64,9 @@
    ```
 
 7. 若移除已发布包的功能，保留 npm 历史 tarball，并用 `npm deprecate` 指向替代能力与迁移版本。**不要 unpublish。**
+8. `npm publish` 之后**必须**按「npm 陷阱」第 2、3 条核对线上真实版本，并从公开 registry 真装一次；
+   回执出现 `+ pkg@ver` 不构成发布成功。若出现 `0.0.0-stage` 占位且 `dist-tags.latest` 仍指向它，
+   说明卡在 2FA，需要能过 2FA 的凭据完成审批（见陷阱第 3 条）。
 
 0.x 阶段允许通过 minor 版本发布破坏性迁移；版本号遵循 SemVer。
 
@@ -81,10 +84,29 @@
      "https://registry.npmjs.org/<pkg>?t=$(date +%s%N)"
    ```
 
-3. **`409 Cannot publish over previously staged version` 是误导性措辞。** 当该版本其实**已经发布成功**时也会报这句。
+3. **报「已成功」不等于已发布：`npm publish` 会走 staged publishing（暂存发布）。**
+   无 2FA proof-of-presence 的 token（典型：为 CI 建的 token）发布时，npm 不报错、退出码为 0、
+   回执写 `+ <pkg>@<ver>` 与 `Publishing to https://registry.npmjs.org/`，但版本**并未公开**：
+   registry 上只出现一个 `0.0.0-stage` 占位，`dist-tags.latest` 指向占位而不是你的版本，
+   公开安装会 **404**。npm 同时打印：
+
+   ```
+   npm notice npm tokens that bypass 2FA are being restricted for account changes and
+   direct publishing. Learn how to prepare: https://gh.io/npm-gat-bypass2fa-deprecation
+   ```
+
+   判据：**占位版本出现后，以 `dist-tags.latest` 是否等于你的版本为唯一成功标准**；
+   若不等，说明卡在 2FA审批，等多久都不会自己好。批准方式：
+
+   - `npm stage list` 看暂存队列，`npm stage approve <stage-id>` 批准（该命令本身要 proof-of-presence，
+     所以同样需要能过 2FA 的凭据）；
+   - 或直接从能过 2FA 的终端交互式重发/批准，或在 npmjs.com 网页端确认（账号 2FA 设为 `auth-type=web` 时）。
+
+   该 token 的其余限制可用 `npm profile get` 探出：被限制的 token 读账号信息会直接 **403**
+   （`GET /-/npm/v1/user`），而 `npm whoami` 仍返回用户名——**whoami 通过不代表这个 token 能发布**。
+
+4. **`409 Cannot publish over previously staged version` 是误导性措辞。** 当该版本其实**已经发布成功**时也会报这句。
    先按第 2 条确认线上真实版本，再决定是否重发——不要据此认为存在待审队列。
-4. **全新包会先拿到一个公开的 `0.0.0-stage` 占位版本**（npm staged publishing）。占位**不代表**发布未完成；
-   以 `dist-tags.latest` 是否指向你的版本为准。
 5. 验证发布成功的**唯一可信手段**是从公开 registry 真装一次，而不是读回执：
 
    ```bash
