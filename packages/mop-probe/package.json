@@ -2,7 +2,6 @@
   "name": "mop-probe",
   "description": "MiOpIIk deployment probe: reports runtime/deployment facts and audits every visible tool schema against the function-calling contract the upstream API enforces (object-root parameters, no null type). Born from an incident where one malformed third-party tool schema failed every turn of a session.",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "license": "MIT",
   "main": "index.js",
