@@ -1,0 +1,10 @@
+# mop-probe bundle patch —— 单行 insert（与 DSH 官方 patch 同形）。
+#
+# `id` 是去 scope 的短行名，`name` 是完整模块 specifier：写成短名会 import 失败，
+# profile 启动时只报 "1 entry did not activate"，工具静默不挂载。
+#
+# 挂载面刻意只有这一行：探针是诊断工具，不进任何 preset、不设默认档位。
+# 需要时按 profile 显式安装；不想要就摘掉这一行。
+- insert:
+    - id: mop-probe
+      name: 'mop-probe'

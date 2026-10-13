@@ -1,0 +1,26 @@
+# mop-probe on the real DSH loader.
+#
+# 探针的 inject 联合只有 tools，但**真实装载有传递依赖**：`@deepseek-ai/dsh-tools`
+# 自己要等 `systemPrompt` 才 activate，而 tools 未 activate 时探针会一直 pending
+# （真实 Loader 报 "2 entries did not activate"）。所以夹具必须补齐这条链：
+# agent → tools（等 systemPrompt）→ mop-probe。少一行不是「测试更纯」，而是
+# 探针根本没挂上，`ctx.tools` 也不存在。
+#
+# 夹具只挂最小面：探针不读 fs / sandbox / sessions，故刻意不补齐另两个包夹具里的
+# 全套服务行——「为不存在的依赖补服务」会掩盖 inject 声明的真实约束。
+- id: session
+  name: '@deepseek-ai/dsh-session'
+
+- id: agent
+  name: '@deepseek-ai/dsh-agent'
+
+- id: system-prompt
+  name: '@deepseek-ai/dsh-system-prompt'
+  config:
+    persona: ''
+
+- id: tools
+  name: '@deepseek-ai/dsh-tools'
+
+- id: mop-probe
+  name: 'mop-probe'

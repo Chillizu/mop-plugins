@@ -30,7 +30,7 @@ MiOpIIk 起初想做「运行时机制的提供者」——自造 executor、模
 
 所以「补一层模型面」是正当的，但必须承认它是在给一扇刻意关上的门开缝：**只开确实需要的缝，缝要窄到不可再窄，永不复制原语（只调 `ctx.*`）。**
 
-## 两个包
+## 三个包
 
 ### `dsh-agent-rewind` — 会话的命名恢复账本
 
@@ -59,11 +59,23 @@ DSH 有 `ctx.sessions.fork(source, boundary)` 这个原语，但**没有任何�
 
 `session_doctor(seams)` 相对原生 `cordis_inspect_*` 的真实增量：后者只给 **API 形状**且明文「cannot invoke business Service methods」；本工具给出**实调证据**（真调 `sessions.list()`、`sessionPersistence.open()+read()`）并把清单**落盘**供全队与人类复核。
 
+### `mop-probe` — 部署探针（工具面契约审计）
+
+| 工具            | 参数                    | 行为                                                                                             |
+| --------------- | ----------------------- | ------------------------------------------------------------------------------------------------ |
+| `mop_probe_env` | `mode!∈env\|tools\|all` | `env`：进程/部署/会话/模型事实；`tools`：审计每个可见工具的 JSON Schema 是否满足上游函数调用契约 |
+
+**它是一次真实事故的产物**：2026-10-13，某个挂在 agent preset 里的第三方探针以 `mop_probe_env` 注册了空 schema，被 deepseek API 拒收——`Invalid schema for function 'mop_probe_env': schema must be a JSON Schema of 'type: "object"', got 'type: null'`——**该会话此后每一轮都失败**，与轮次内容无关。DSH 的 `tools.register()` 原样路径不做 object-root 校验，所以这道判据只能由插件侧自己守。
+
+本包给出三层防线：注册形态唯一（一律 `defineTool()`，`test/mop-probe.test.js` 扫源码禁止绕过）、判据双向可用（扁平参数图与投影 schema 同判，CI 与运行时共用一份）、只读自检（读 `tools.schemas()` 且**报错不抛错**）。
+
+与 `session_doctor` 的分工：后者探 DSH **seam 可用性**（失败=功能降级），本包探**这次请求能否被上游接受**（失败=整轮会话炸）。详见 [packages/mop-probe/README.md](packages/mop-probe/README.md)。
+
 ## 命名
 
-**包名与工具名一一对应，不再有 `mop_` 前缀。**
+**工具名前缀 = 所属包职责**，包名与工具名一一对应。
 
-- 工具名前缀 = 它所属包的职责：账本包 → `agent_*`，策略包 → `session_*`。
+- 账本包 → `agent_*`，策略包 → `session_*`，探针包 → `mop_*`（0.5.0 起消灭的 `mop_` 前缀**只**用于诊断探针一个工具；它是独立包、不进 preset、不参与会话策略套件）。
 - 这与 DSH 官方先例同形：包 `dsh-tool-session-query` → 工具 `session_*`。
 - 包名保留 `dsh-` 前缀。**不要**用无前缀的 `agent-rewind` / `agent-checkpoint`——npm 上均已被同类项目占用，按「不代替已存在的」原则避开。
 
@@ -105,6 +117,7 @@ dsh plugin --profile <profile> add dsh-session-policy
 - DSH 给 `sessions.fork` 加模型可见工具 → `dsh-agent-rewind` 整体删除
 - DSH 开放会话级提示编辑入口 → `session_rule` 删除
 - DSH 给 token 投影加模型面 → `session_doctor(stats)` 删除
+- DSH 在注册期校验工具参数 schema（拒绝空/非 object-root）→ `mop_probe_env(mode="tools")` 删除
 - ~~DSH 提供「必须显式选路由」模式~~ → `dsh-miopiik-policy` **已于 0.5.0 提前删除**（它守的 `subagent_execute` 是 preset 里的行、不是插件能力；preset 配置归用户）
 
 **每次 DSH 升级的标准动作**：重跑证据核对，被吸收的条目删除。
@@ -128,7 +141,7 @@ dsh plugin --profile <profile> add @deepseek-ai/dsh-tool-session-query
 ## 开发
 
 ```bash
-npm run check              # node --check 五个入口
+npm run check              # node --check 全部入口（含 mop-probe）
 npm run lint               # eslint（已 ignore .dsh/** 会话工作区）
 npm run format:check       # prettier
 npm test                   # 单元测试（stub 掉 harness 私有包）

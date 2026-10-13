@@ -5,6 +5,37 @@
 
 ## [Unreleased]
 
+### Added
+
+- **`mop-probe`（独立诊断包，`0.1.0`，不参与 0.5.x lockstep 发布列车）。**
+  一个模型可见工具 `mop_probe_env`：`mode="env"` 报运行时/部署/会话/模型事实，
+  `mode="tools"` 审计每个可见工具的 JSON Schema 是否满足上游函数调用契约。
+
+  起因是一次真实事故：某个挂在 agent preset 里的第三方探针以 `mop_probe_env` 注册了
+  **空 schema**，deepseek API 直接拒收整个请求 ——
+  `Invalid schema for function 'mop_probe_env': schema must be a JSON Schema of
+'type: "object"', got 'type: null'` —— 该会话此后**每一轮都失败**，与轮次内容无关。
+  DSH 的 `tools.register()` 原样路径不做 object-root 校验，所以这道判据只能由插件侧守。
+
+  本包给出三层防线：注册形态唯一（一律 `defineTool()`，`test/mop-probe.test.js` 扫源码
+  禁止绕过）、判据双向可用（扁平参数图与投影 schema 同判，CI 与运行时共用一份）、
+  只读自检（读 `tools.schemas()`，发现违规**如实报告而不抛错**）。`test/composition/`
+  新增真实 Loader 挂载 + 真实投影面实跑审计的验证。
+
+  > 与已删除的第三方 `mop-probe` **不是同一份实现**：那是 `/tmp/mop-probe` 软链进 web
+  > profile 的临时包；本包在工作区内重建并带契约门禁。
+
+- **`test/mop-probe.test.js` 的 schema 契约门禁**（并入 `npm test`）：反例锚定线上那条
+  `type: null`，正向覆盖全部 workspace 包的实际注册结果。
+- `test/composition/cordis.with-mop-probe.yml`：探针的真实装载夹具（`tools` 行经
+  `systemPrompt` 传递依赖才会 activate —— 少一行探针会一直 pending）。
+
+### Changed
+
+- `README.md` / `packages/mop-probe/README.md`：套件从「两个包」更新为「三个包」，
+  并写明 `mop_*` 前缀自 0.5.0 起**只**用于诊断探针这一个工具。
+- `npm run check` 覆盖 `packages/mop-probe/` 的两个入口。
+
 ## [0.5.1] - 2026-10-13
 
 ### Fixed

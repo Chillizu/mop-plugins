@@ -19,7 +19,7 @@
     "test": "node --import ./test/register-mocks.mjs --test --test-isolation=none \"test/*.test.js\"",
     "test:contract": "node test/session-contract.mjs",
     "test:composition": "node --test \"test/composition/*.test.mjs\"",
-    "check": "node --check packages/dsh-agent-rewind/index.js && node --check packages/dsh-agent-rewind/ledger.js && node --check packages/dsh-session-policy/index.js && node --check packages/dsh-session-policy/session-rules.js && node --check packages/dsh-session-policy/diagnostics.js",
+    "check": "node --check packages/dsh-agent-rewind/index.js && node --check packages/dsh-agent-rewind/ledger.js && node --check packages/dsh-session-policy/index.js && node --check packages/dsh-session-policy/session-rules.js && node --check packages/dsh-session-policy/diagnostics.js && node --check packages/mop-probe/index.js && node --check packages/mop-probe/probe.js",
     "lint": "eslint .",
     "format:check": "prettier --check ."
   },

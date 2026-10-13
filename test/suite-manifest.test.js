@@ -1,5 +1,6 @@
-// 套件清单不变式：瘦身后 packages/ 只有两个包 —— dsh-session-policy（会话硬规则 +
-// seam/统计诊断）与 dsh-agent-rewind（命名恢复账本）。
+// 套件清单不变式：packages/ 恰有三个包 —— dsh-session-policy（会话硬规则 +
+// seam/统计诊断）、dsh-agent-rewind（命名恢复账本）、mop-probe（部署探针 / 工具面
+// 契约审计，事故后重建）。
 // preset/、bin/ 与全部历史兼容包都已退役，任何残留引用都会让 profile 启动时静默
 // 降级（"1 entry did not activate"）。
 import assert from 'node:assert/strict'
@@ -9,13 +10,15 @@ import test from 'node:test'
 
 import * as policy from '../packages/dsh-session-policy/index.js'
 import * as ledger from '../packages/dsh-agent-rewind/index.js'
+import * as probe from '../packages/mop-probe/index.js'
 
 const ROOT = join(import.meta.dirname, '..')
 const PACKAGES = join(ROOT, 'packages')
 const META = join(PACKAGES, 'dsh-session-policy')
 const LEDGER = join(PACKAGES, 'dsh-agent-rewind')
-const RETAINED_DIRS = ['dsh-agent-rewind', 'dsh-session-policy']
-const RETAINED_NAMES = ['dsh-agent-rewind', 'dsh-session-policy']
+const PROBE = join(PACKAGES, 'mop-probe')
+const RETAINED_DIRS = ['dsh-agent-rewind', 'dsh-session-policy', 'mop-probe']
+const RETAINED_NAMES = ['dsh-agent-rewind', 'dsh-session-policy', 'mop-probe']
 const DEPENDENCY_SECTIONS = [
   'dependencies',
   'optionalDependencies',
@@ -54,7 +57,7 @@ function packageNameOf(specifier) {
   return specifier.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0]
 }
 
-test('packages/ holds exactly the two retained workspace packages', () => {
+test('packages/ holds exactly the retained workspace packages', () => {
   assert.deepEqual(workspaceDirs(), RETAINED_DIRS)
   const names = workspaceDirs().map(
     (dir) => readJson(join(PACKAGES, dir, 'package.json')).name,
@@ -65,13 +68,17 @@ test('packages/ holds exactly the two retained workspace packages', () => {
   }
 })
 
-test('the suite patch mounts exactly the two retained rows', () => {
+test('the suite patch mounts exactly the retained rows', () => {
   assert.deepEqual(patchRows(join(META, 'cordis.patch.yml')), [
     { id: 'dsh-session-policy', name: 'dsh-session-policy' },
     { id: 'dsh-agent-rewind', name: 'dsh-agent-rewind' },
   ])
   assert.deepEqual(patchRows(join(LEDGER, 'cordis.patch.yml')), [
     { id: 'dsh-agent-rewind', name: 'dsh-agent-rewind' },
+  ])
+  // 探针刻意只挂自己一行：诊断工具不进 preset、不随会话策略套件连带安装。
+  assert.deepEqual(patchRows(join(PROBE, 'cordis.patch.yml')), [
+    { id: 'mop-probe', name: 'mop-probe' },
   ])
 })
 
@@ -107,7 +114,7 @@ test('the meta package depends on the ledger at the lockstep range', () => {
   assert.equal(ledgerPkg.dependencies, undefined, 'ledger has no internal deps')
 })
 
-test('both manifests stay publishable DSH bundles', () => {
+test('every retained manifest stays a publishable DSH bundle', () => {
   for (const dir of RETAINED_DIRS) {
     const pkg = readJson(join(PACKAGES, dir, 'package.json'))
     assert.equal(pkg.type, 'module', `${pkg.name} type`)
@@ -159,7 +166,7 @@ test('presets, bin scripts and the example layer are gone', () => {
   )
 })
 
-test('both packages import only declared modules', () => {
+test('every retained package imports only declared modules', () => {
   for (const dir of RETAINED_DIRS) {
     const pkg = readJson(join(PACKAGES, dir, 'package.json'))
     const declared = new Set(
@@ -191,6 +198,22 @@ test('the exported runtime surfaces stay frozen', () => {
       'tools',
     ])
     assert.equal(typeof module.apply, 'function')
+  }
+  // 探针只 inject tools：多 inject 一条就多一处上游漂移面，探针本身要最窄。
+  assert.deepEqual([...probe.inject], ['tools'])
+  assert.equal(typeof probe.apply, 'function')
+  assert.equal(probe.name, 'mop-probe')
+  for (const helper of [
+    'collectEnv',
+    'normalizeParameterSchema',
+    'probeToolSurface',
+    'toolSchemaViolations',
+  ]) {
+    assert.equal(
+      typeof probe[helper],
+      'function',
+      `${helper} must be exported by the probe`,
+    )
   }
   assert.equal(policy.name, 'dsh-session-policy')
   assert.equal(typeof policy.probe, 'function')

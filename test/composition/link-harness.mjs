@@ -184,9 +184,9 @@ export function ensureLinks() {
       harnessPackagePath(name, sourceRel),
     )
   }
-  // The two retained MiOpIIk packages the composition tests mount. Link them under
-  // their **package names** (what the Loader resolves), not their directory names.
-  for (const name of ['dsh-agent-rewind', 'dsh-session-policy']) {
+  // The MiOpIIk packages the composition tests mount. Link them under their
+  // **package names** (what the Loader resolves), not their directory names.
+  for (const name of ['dsh-agent-rewind', 'dsh-session-policy', 'mop-probe']) {
     linkIfMissing(
       join(here, 'node_modules', name),
       join(MOP_ROOT, 'packages', name),
