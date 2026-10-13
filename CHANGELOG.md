@@ -5,6 +5,36 @@
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-10-13
+
+### Fixed
+
+- **`agent_checkpoint` 在真实部署里 100% 失败。** DSH 的 `Session` **没有** 公开的 `.events`
+  属性——事件只能经 `snapshotEvents()` 取得。旧实现读 `agent.session.events`，于是拿到
+  `undefined`，被自身校验误判成「会话不可用」并报
+  `agent_checkpoint: event stream of session <id> unavailable`，检查点永远写不下去。
+  现经 `liveSessionEvents()` 统一取内存快照，并保留对更早 `Session` 形态 `.events`
+  的兼容回落。
+
+  为什么选已弃用的同步 `snapshotEvents()` 而不是 async 的 `sessionQuery.readSession`：
+  持久化后端是**异步缓冲**的，durable log 可能落后于内存；而检查点要的是「**此刻**
+  最后一个 `turn/end`」，慢一拍就会把边界记小、回溯到错的位置。live 会话优先取内存
+  快照，durable 读只作为会话不再 live 时的回落。
+
+- **测试替身比现实更宽松，掩盖了上面这个缺陷。** `test/harness-mocks.mjs` 的 `rootAgent()`
+  曾返回 `{ id, header, events }`，凭空造出一个真实 `Session` 没有的 `.events`，
+  让「读 live 会话事件流」的代码路径一路绿灯。现替身只提供真实 API
+  （`snapshotEvents()` 有、`.events` 没有），并新增 `test/session-contract.mjs`：
+  在**无 stub 的独立进程**里对真实 `Session` 类实测断言该契约（快照存在、`.events` 缺位、
+  插件能从替身读出事件并定位边界），以 `npm run test:contract` 纳入门禁。
+
+- 新增回归锚 `agent_checkpoint reads a live session only through snapshotEvents()`：
+  先断言替身不得暴露 `.events`，再验证边界确实来自 `snapshotEvents()` 读到的事件流。
+
+### Removed
+
+- 清掉两个中途引入、实际无人使用的 devDependency（`@deepseek-ai/dsh-llm`、`zod`）。
+
 ## [0.5.0] - 2026-10-13
 
 **破坏性重定位：原生优先（native-first）。** 本版删除绝大多数功能并重新切分包边界，理由是 DSH `0.2.0-rc.2` 已经原生提供它们。判据与取证见 [docs/design/0.5-repositioning.md](docs/design/0.5-repositioning.md)。

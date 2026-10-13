@@ -203,6 +203,35 @@ export function lastTurnEndSeq(events) {
   return 0
 }
 
+/**
+ * 读一个 live Session 的事件流。
+ *
+ * DSH 的 `Session` **没有** 公开的 `.events` 属性——事件只能通过
+ * `snapshotEvents()`（或已弃用的 `ownEvents()`）取得。用 `session.events`
+ * 会拿到 `undefined`，进而被误报成「会话不可用」。
+ *
+ * 为什么用这个已弃用的同步读、而不是只走 async 的 `sessionQuery.readSession`：
+ * 持久化后端是**异步缓冲**的，durable log 可能落后于内存；而 checkpoint 要的是
+ * 「**此刻**最后一个 turn/end」，慢一拍就会把边界记小、回溯到错的位置。故 live
+ * 会话优先取内存快照，durable 读只作为会话不再 live 时的回落。
+ *
+ * @returns 事件数组；取不到时返回 `null`（调用方据此报错）。
+ */
+export function liveSessionEvents(session) {
+  if (!session || typeof session !== 'object') return null
+  const snapshot = session.snapshotEvents
+  if (typeof snapshot === 'function') {
+    try {
+      const events = snapshot.call(session)
+      if (Array.isArray(events)) return events
+    } catch {
+      // 落到下面的兼容分支；两条都不行就返回 null，由调用方报错。
+    }
+  }
+  // 兼容面：更早的 Session 形态曾暴露 `.events`。仅为兼容保留，正常 DSH 不走这里。
+  return Array.isArray(session.events) ? session.events : null
+}
+
 /** 读文件内容；仅当文件不存在返回空串，权限等其它错误照常抛出。 */
 async function readExisting(fs, target) {
   const stat = await fs.stat(target)
@@ -491,11 +520,11 @@ export function registerLedgerTools(ctx, deps) {
           sid = normalizeSessionId(sessions, requested)
           const live = sessions.get(sid)
           events = live
-            ? live.events
+            ? liveSessionEvents(live)
             : (await readAllEvents(ctx, sid, 'agent_checkpoint')).events
         } else {
           sid = agent.session.id
-          events = agent.session.events
+          events = liveSessionEvents(agent.session)
         }
         if (!sid)
           throw new Error('agent_checkpoint: target session id unavailable')

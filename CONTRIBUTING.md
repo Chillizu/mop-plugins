@@ -20,9 +20,10 @@
 | `npm run format:check`           | Prettier                                                                            |
 | `bash tools/verify-crossrefs.sh` | 文档相对链接检查                                                                    |
 | `npm test`                       | 单测；stub 两个 harness workspace 包，其余走真实现                                  |
+| `npm run test:contract`          | 会话替身契约校验：**无 stub 独立进程**里对真实 `Session` 类实测，防替身比现实更宽松 |
 | `npm run test:composition`       | 真实 DSH Cordis Loader 集成检查；按 `DSH_HARNESS_ROOT` 找源码，缺失时回退已装发行版 |
 
-`npm test` 与 `test:composition` 都必须绿。**不要**用只跑 `packages/` 的局部 eslint 当验收门——它不会覆盖测试。
+`npm test`、`test:contract` 与 `test:composition` 都必须绿。**不要**用只跑 `packages/` 的局部 eslint 当验收门——它不会覆盖测试。
 
 ## 代码约定
 
@@ -37,6 +38,12 @@
 - **对 fork 用 `buildForkSeed`**，不要手工 `events.slice(0, seq+1)`：边界落在未闭合 turn 中间时，
   后者会产出结构未闭合的子会话（缺 `session/end-seed` / `step/end` / `turn/end`）。
 - 能力探测的 `presenceOnly` 收**谓词函数**，不是布尔值——传预算好的布尔会被 `typeof fn === 'function'` 判成 false。
+- **读 live 会话事件流只能用 `snapshotEvents()`**：真实 `Session` 没有公开的 `.events`，
+  读它会拿到 `undefined`。已弃用的同步读是**有意**选择——持久化后端异步缓冲，durable log
+  可能落后于内存，而边界必须取「此刻」的值。见 `test/session-contract.mjs`。
+- **测试替身不得比现实更宽松**：替身只能暴露真实类型也有的成员。多给一个属性就会让
+  整条代码路径假绿——`rootAgent()` 曾凭空提供 `.events`，掩盖了 `agent_checkpoint`
+  在真实部署 100% 失败。改替身时同步跑 `npm run test:contract`。
 
 ## 版本与发布
 

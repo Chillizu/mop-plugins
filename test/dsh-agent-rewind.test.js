@@ -422,6 +422,40 @@ test('agent_checkpoint refuses a blank or unreadable explicit sessionId', async 
   )
 })
 
+test('agent_checkpoint reads a live session only through snapshotEvents()', async () => {
+  // 回归锚（真实事故）：DSH 的 `Session` **没有** 公开的 `.events` 属性，事件只能经
+  // `snapshotEvents()` 取得。旧实现读 `agent.session.events` → undefined →
+  // 误报 "event stream ... unavailable"，checkpoint 在真实部署里 100% 失败。
+  // 契约由 test/session-contract.mjs 对真实 Session 类实测（快照存在、.events 缺位）。
+  const events = [
+    { seq: 0, type: 'turn/start', time: 1, data: { turn: 0 } },
+    { seq: 1, type: 'turn/end', time: 2, data: { turn: 0 } },
+    { seq: 2, type: 'turn/start', time: 3, data: { turn: 1 } },
+    { seq: 3, type: 'turn/end', time: 4, data: { turn: 1 } },
+  ]
+  const agent = rootAgent({ events })
+  // 前置断言：这个替身不得像旧 fixture 那样偷偷提供 `.events`。
+  assert.equal(
+    agent.session.events,
+    undefined,
+    '替身不得暴露 .events（真实 Session 没有）',
+  )
+  const harness = makeHarness()
+  harness.apply()
+  const out = await runTool(
+    harness,
+    'agent_checkpoint',
+    { label: 'live-snapshot' },
+    { agent },
+  )
+  // 边界必须来自 snapshotEvents() 读到的事件流（最后一个 turn/end 的 seq = 3）。
+  assert.equal(out, 'checkpoint OK: live-snapshot @ session session-root seq 3')
+  assert.match(
+    harness.disk.content(CHECKPOINTS_PATH),
+    /live-snapshot \| session=session-root \| seq=3/,
+  )
+})
+
 test('agent_checkpoint refuses a session without cwd, id or event stream', async () => {
   const harness = makeHarness()
   harness.apply()
@@ -451,7 +485,12 @@ test('agent_checkpoint refuses a session without cwd, id or event stream', async
         harness,
         'agent_checkpoint',
         { label: 'x' },
-        { agent: rootAgent({ events: 'not-an-array' }) },
+        {
+          // 会话对象无法产出事件流：既没有 snapshotEvents() 也没有 .events。
+          // 这正是「替身曾比现实更宽松」要防的形态——真实 Session 的公开面
+          // 只有 snapshotEvents()，所以「读不出事件」必须报错而不是静默当空。
+          agent: { session: { id: 'session-root', header: { cwd: CWD } } },
+        },
       ),
     /agent_checkpoint: event stream of session session-root unavailable/,
   )

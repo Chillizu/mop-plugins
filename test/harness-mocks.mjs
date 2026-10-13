@@ -214,18 +214,46 @@ export async function runTool(harness, name, args, exec = {}) {
 /**
  * 会话/agent 替身。header 的 delegationDepth 只在显式给 depth 时写入——真实
  * SessionHeader 对根会话不写该字段（absent = 0），显式写 0 会掩盖回归。
+ *
+ * **契约纪律：替身不得暴露真实 `Session` 没有的属性。**
+ * 曾经这里写 `{ id, header, events }`，而真实 `Session` 根本没有公开的 `.events`
+ * —— 事件只能经 `snapshotEvents()` 取得。那个多出来的 `.events` 让「读 live 会话
+ * 事件流」的缺陷一路绿灯（生产上 `agent_checkpoint` 直接报
+ * "event stream ... unavailable"）。现在替身只提供真实 API（见 makeSessionLike），
+ * 并由 test/session-contract.mjs 在独立进程里对真实 `Session` 类实测断言该契约。
  */
 export function rootAgent(options = {}) {
   const id = options.id ?? 'session-root'
   const header = { id, cwd: options.cwd ?? CWD }
   if (options.depth !== undefined) header.delegationDepth = options.depth
-  const session = { id, header, events: options.events ?? [] }
+  const events = options.events ?? []
   return {
-    session,
+    session: makeSessionLike(id, events, header),
     ctx: {
       get: (name) =>
         name === 'systemPrompt' ? options.systemPrompt : undefined,
     },
+  }
+}
+
+/**
+ * 会话替身，**只提供真实 `Session` 也有的 API**。
+ *
+ * 契约（由 test/session-contract.mjs 在无 stub 的独立进程里对真实 `Session`
+ * 类实测断言，双方必须同时满足）：
+ *   - `snapshotEvents()`  必须存在，调用返回数组
+ *   - **不得存在** `.events` —— 真实 Session 没有这个公开属性
+ *
+ * 事件形状过不了真实校验的测试（故意用最小/畸形形状）也走这里，所以替身不加载
+ * 真实类，避免把 harness 的独立性绑死在 harness 依赖树上。
+ */
+export function makeSessionLike(id, events, header) {
+  const frozen = Object.freeze([...events])
+  return {
+    id,
+    header,
+    snapshotEvents: () => frozen,
+    ownEvents: () => frozen,
   }
 }
 

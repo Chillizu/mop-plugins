@@ -95,9 +95,15 @@ test('no retained manifest depends on a non-retained internal package', () => {
 
 test('the meta package depends on the ledger at the lockstep range', () => {
   const pkg = readJson(join(META, 'package.json'))
-  assert.equal(pkg.dependencies['dsh-agent-rewind'], '^0.5.0')
   const ledgerPkg = readJson(join(LEDGER, 'package.json'))
-  assert.equal(ledgerPkg.version, '0.5.0')
+  // 断言的是**不变式**而不是某个具体版本号：两包同版本，且依赖范围是 `^<该版本>`。
+  // 硬编码 `^0.5.0` 会在每次升版时无故变红（真实发生：0.5.1 发布时）。
+  assert.equal(
+    pkg.dependencies['dsh-agent-rewind'],
+    `^${pkg.version}`,
+    'meta 对账本的依赖必须是 lockstep 范围 ^<meta 版本>',
+  )
+  assert.equal(ledgerPkg.version, pkg.version, '两个包必须 lockstep 同版本')
   assert.equal(ledgerPkg.dependencies, undefined, 'ledger has no internal deps')
 })
 
