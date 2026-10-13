@@ -28,10 +28,13 @@
   只读自检（读 `tools.schemas()`，发现违规**如实报告而不抛错**）。`test/composition/`
   新增真实 Loader 挂载 + 真实投影面实跑审计的验证。
 
-  发布状态：**已暂存、待 2FA 审批**。`npm publish` 退出码为 0 但未公开——
-  registry 上只有 `0.0.0-stage` 占位，`dist-tags.latest` 尚未指向 `0.1.0`，公开安装会 404。
-  原因见 `CONTRIBUTING.md` 的「npm 陷阱」第 3 条（无 2FA proof-of-presence 的 token 会被 npm 转入
-  staged publishing）。本机安装不受影响：web profile 走 `link:` 指向工作区，与 npm 无关。
+  发布状态：**已公开发布**。`registry.npmjs.org` 上 `dist-tags.latest = 0.1.0`，
+  全新目录 `npm install mop-probe@0.1.0` 实装成功（5 个文件、MIT、`dsh.bundle.patch` 在包内）。
+  注意本包只声明 `@deepseek-ai/dsh-tools` 为 optional peer——它是 DSH 发行版自带的包、不在 npm，
+  所以独立目录里直接 `import 'mop-probe'` 会报该 peer 缺失，这是预期形态，不是包缺陷。
+
+  发布中的一次误判记在 `CONTRIBUTING.md`「npm 陷阱」第 3 条：发布后两三分钟内 registry 只显示
+  `0.0.0-stage` 占位且公开安装 404，那是**传播延迟**，不是 2FA 卡住。
 
   发布前实测：web profile 真实工具面 **42 个工具全部通过契约校验**（object-root、
   无 null 类型、`required ⊆ properties`）。
