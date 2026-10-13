@@ -5,6 +5,18 @@
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-13
+
+### Fixed
+
+- 修复套件 patch 挂载 `@deepseek-ai/dsh-tool-session-query` 行、却没有依赖支撑导致的启动降级：`0.4.0` 假定该能力由 DSH 0.2 宿主内置，但 `0.2.0-rc.2` 只把该包发布在 npm、不随 harness 安装，于是 profile 启动报 `dsh: warning: 1 entry did not activate` / `dsh-tool-session-query (@deepseek-ai/dsh-tool-session-query): failed to import`，会话查询工具始终不装载。现恢复为套件依赖并锁定 `^0.2.0-rc.2`（与宿主同版本，不嵌套旧 `0.1.7` runtime）。
+- preset 的 workflow 引擎行从已停止发布的 `@deepseek-ai/dsh-workflow-worker-thread` 改为 DSH 0.2 官方使用的 `@deepseek-ai/dsh-workflow-ptc`。前者在 npm 上最高只有 `0.1.5-rc.3`、没有 0.2.x，也不存在于 `0.2.0-rc.2` 安装中，该 row 无法导入。
+- 新增回归测试：patch 与 preset 引用的官方模块必须来自 DSH 宿主内置清单，或声明为套件依赖。
+
+### Validation
+
+- 单元测试全绿；并在隔离 `DSH_HOME` 下用 DSH `0.2.0-rc.2` 实际启动 profile，确认 `0.4.0` 的 `failed to import` 告警消失。
+
 ## [0.4.0] - 2026-10-04
 
 ### Changed

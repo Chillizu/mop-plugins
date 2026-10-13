@@ -1,7 +1,7 @@
 {
   "name": "dsh-miopiik-policy",
   "description": "MiOpIIk fail-closed route requirement for the native DSH subagent tool",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "type": "module",
   "main": "index.js",
   "exports": {

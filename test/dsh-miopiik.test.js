@@ -22,6 +22,38 @@ const INTERNAL_PACKAGES = [
   'dsh-miopiik-tool-recovery',
 ]
 
+// Official modules the DSH 0.2.0-rc.2 harness install ships. A row naming one of
+// these resolves from the harness checkout. Any other `@deepseek-ai/*` row MUST be
+// a declared suite dependency — otherwise the profile boots degraded with
+// "dsh: warning: 1 entry did not activate" / "... failed to import", and the tool
+// silently never mounts (regression fixed in 0.4.1).
+const DSH_HOST_PROVIDED = new Set([
+  '@deepseek-ai/dsh-agent-instructions',
+  '@deepseek-ai/dsh-command-compact',
+  '@deepseek-ai/dsh-compaction-basic',
+  '@deepseek-ai/dsh-compaction-tool-result-pruner',
+  '@deepseek-ai/dsh-persona',
+  '@deepseek-ai/dsh-plan-mode',
+  '@deepseek-ai/dsh-skill-filesystem',
+  '@deepseek-ai/dsh-tool-ask-user',
+  '@deepseek-ai/dsh-tool-bash',
+  '@deepseek-ai/dsh-tool-fs',
+  '@deepseek-ai/dsh-tool-fs-search',
+  '@deepseek-ai/dsh-tool-goal',
+  '@deepseek-ai/dsh-tool-jobs',
+  '@deepseek-ai/dsh-tool-pwsh',
+  '@deepseek-ai/dsh-tool-ralph',
+  '@deepseek-ai/dsh-tool-skill',
+  '@deepseek-ai/dsh-tool-subagent',
+  '@deepseek-ai/dsh-tool-subagent-control',
+  '@deepseek-ai/dsh-tool-subagent-control/list-agents',
+  '@deepseek-ai/dsh-tool-subagent/model-selection-settings',
+  '@deepseek-ai/dsh-tool-todo',
+  '@deepseek-ai/dsh-tool-web',
+  '@deepseek-ai/dsh-tool-workflow',
+  '@deepseek-ai/dsh-workflow-ptc',
+])
+
 function walk(dir) {
   const out = []
   for (const entry of readdirSync(dir)) {
@@ -40,13 +72,41 @@ test('suite patch mounts MiOpIIk extensions and the missing DSH session-query pl
   assert.deepEqual(inserted.sort(), [...HOST_ROWS].sort())
 })
 
+test('every official row resolves from the DSH host bundle or a suite dependency', () => {
+  const pkg = JSON.parse(readFileSync(join(META, 'package.json'), 'utf8'))
+  const declared = new Set(Object.keys(pkg.dependencies || {}))
+  const refs = [
+    join(META, 'cordis.patch.yml'),
+    join(META, 'preset', 'agent.cordis.yml'),
+  ].flatMap((path) => [
+    ...readFileSync(path, 'utf8').matchAll(/name:\s*'(@deepseek-ai\/[^']+)'/g),
+  ])
+  const unrouted = [...new Set(refs.map((m) => m[1]))].filter(
+    (name) => !DSH_HOST_PROVIDED.has(name) && !declared.has(name),
+  )
+  assert.deepEqual(
+    unrouted,
+    [],
+    `official rows with no provider (add the dependency or fix the row name): ${unrouted.join(', ')}`,
+  )
+})
+
+test('preset mounts the DSH 0.2 workflow engine, not the retired worker-thread package', () => {
+  const yaml = readFileSync(join(META, 'preset', 'agent.cordis.yml'), 'utf8')
+  assert.match(
+    yaml,
+    /- id: workflow-ptc\n\s+name: '@deepseek-ai\/dsh-workflow-ptc'/,
+  )
+  assert.doesNotMatch(yaml, /dsh-workflow-worker-thread/)
+})
+
 test('suite depends on every retained workspace and official native plugins', () => {
   const pkg = JSON.parse(readFileSync(join(META, 'package.json'), 'utf8'))
   const deps = pkg.dependencies || {}
   for (const name of INTERNAL_PACKAGES)
     assert.equal(deps[name], `^${pkg.version}`)
   assert.equal(deps['@deepseek-ai/dsh-tool-subagent'], undefined)
-  assert.equal(deps['@deepseek-ai/dsh-tool-session-query'], undefined)
+  assert.equal(deps['@deepseek-ai/dsh-tool-session-query'], '^0.2.0-rc.2')
   assert.equal(deps['dsh-miopiik-executor'], undefined)
   assert.equal(deps['dsh-miopiik-model-auth'], undefined)
   assert.equal(deps['dsh-miopiik-recall'], undefined)
