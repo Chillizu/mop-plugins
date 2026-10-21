@@ -1,71 +1,24 @@
 name: Composition
 
-# REAL-composition gate (test/composition/): boot the mop packages through the
-# real DSH harness Cordis Loader instead of the register-mocks stubs. This is NOT
-# in the push/PR gate (ci.yml) because a full harness pnpm install + build:lib:host
-# is too heavy for free runners; it runs manually (workflow_dispatch) or weekly
-# (schedule). Two legs:
-#
-#   * pinned — a known-good harness commit. GATE: a failure here is a real mop
-#     regression against that snapshot.
-#   * master  — tracks the harness HEAD. WARNING ONLY (continue-on-error): this
-#     is the leg that actually catches UPSTREAM seam drift as the rc harness
-#     moves; it must not block, because master can break for harness-internal
-#     reasons unrelated to mop.
-#
-# To bump the pinned snapshot: verify a new harness commit locally, then update
-# the PINNED value below. See test/composition/README.md.
-
 on:
+  push:
+    branches: [main]
+  pull_request:
   workflow_dispatch:
-  schedule:
-    - cron: '0 4 * * 1' # weekly Monday 04:00 UTC
 
 jobs:
   composition:
     runs-on: ubuntu-latest
-    continue-on-error: ${{ matrix.dsh_ref == 'master' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        dsh_ref:
-          - '639ed015397290b3745d163aafe02ffee4aa3f84' # PINNED (gate)
-          - 'master' # upstream drift warning (non-gating)
     steps:
-      - name: Checkout mop-plugins
-        uses: actions/checkout@v4
-        with:
-          path: mop-plugins
-
-      - name: Checkout DSH harness
-        uses: actions/checkout@v4
-        with:
-          repository: deepseek-ai/deepseek-harness
-          ref: ${{ matrix.dsh_ref }}
-          path: harness
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 11.7.0
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 24
-
-      - name: Install + build harness (host lib only)
-        working-directory: harness
+          cache: npm
+      - run: npm ci
+      - name: Install tested DSH distribution
+        run: npm install -g @deepseek-ai/dsh@0.2.1-rc.2 --no-audit --no-fund
+      - name: Real Loader integration and Session contract
         run: |
-          pnpm install --frozen-lockfile
-          npm run build:lib:host
-
-      - name: Install mop-plugins
-        working-directory: mop-plugins
-        run: npm ci
-
-      - name: Run REAL-composition tests
-        working-directory: mop-plugins
-        env:
-          DSH_HARNESS_ROOT: ${{ github.workspace }}/harness
-        run: npm run test:composition
+          npm run test:contract
+          npm run test:composition

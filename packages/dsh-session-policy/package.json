@@ -1,7 +1,7 @@
 {
   "name": "dsh-session-policy",
   "description": "MiOpIIk: session-scoped hard rules (session_rule) and DSH seam/token diagnostics (session_doctor) — the model-visible surface DSH deliberately withholds. Named recovery points moved to dsh-agent-rewind.",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "type": "module",
   "license": "MIT",
   "main": "index.js",
@@ -43,11 +43,11 @@
     }
   },
   "dependencies": {
-    "dsh-agent-rewind": "^0.5.1"
+    "dsh-agent-rewind": "^0.5.2"
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-tools": "^0.2.0-rc.2",
-    "@deepseek-ai/dsh-session": "^0.2.0-rc.2"
+    "@deepseek-ai/dsh-tools": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-session": "0.2.1-rc.2"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/dsh-tools": {

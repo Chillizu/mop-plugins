@@ -5,6 +5,14 @@
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-10-21 (DSH 0.2.1 compatibility and maintenance-mode cleanup)
+
+- `dsh-agent-rewind` and `dsh-session-policy`: align runtime peer dependencies and real composition tests with DSH `0.2.1-rc.2`. Keep named rewind, session-scoped rules, and diagnostic tools unchanged.
+- `mop-probe` separately advances to `0.1.1` with the matching DSH peer contract; the read-only schema auditing tool is unchanged.
+- Remove historical design/experiment documents from the **current tree** (retained in Git history), superseded CLI lab and DSH 0.2.0 spawn-fixture tests. Real Loader coverage now tests only maintained functionality.
+- Simplify the three Cordis bundle patches, READMEs and CI; no legacy compatibility aliases or obsolete orchestration framework.
+- The live profile's existing state, sessions, and local untracked archive are out of scope for this repository cleanup.
+
 ## [0.1.0] - 2026-10-13
 
 **本仓库第一个独立发布的包**：`mop-probe` 走自己的版本线（`0.1.x`），不随

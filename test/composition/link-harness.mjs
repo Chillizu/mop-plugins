@@ -108,11 +108,6 @@ const FIXTURE_LINKS = [
   ['dsh-session-projection', 'packages/session/session-projection'],
   ['dsh-sandbox-local', 'packages/sandbox/sandbox-local'],
   ['dsh-agent', 'packages/core/agent'],
-  ['dsh-subagent', 'packages/subagent/subagent'],
-  [
-    'dsh-subagent-spawn-in-process',
-    'packages/subagent/subagent-spawn-in-process',
-  ],
   ['dsh-token-meter', 'packages/llm/token-meter'],
   ['dsh-fs-sandbox', 'packages/fs/fs-sandbox'],
   ['dsh-sandbox-policy', 'packages/sandbox/sandbox-policy'],

@@ -21,12 +21,6 @@
 - id: tools
   name: '@deepseek-ai/dsh-tools'
 
-- id: subagent
-  name: '@deepseek-ai/dsh-subagent'
-
-- id: subagent-spawn-in-process
-  name: '@deepseek-ai/dsh-subagent-spawn-in-process'
-
 - id: session-projection
   name: '@deepseek-ai/dsh-session-projection'
 

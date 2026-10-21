@@ -1,5 +1,4 @@
 node_modules/
-docs/
 package-lock.json
 # 会话期工作区（记忆 / 检查点 / recon 调查产物），已在 .gitignore 里
 .dsh/
