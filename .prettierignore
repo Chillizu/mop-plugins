@@ -1,7 +1,4 @@
 node_modules/
-docs/
-# 逐字镜像 live preset（${DSH_HOME}/.agent-presets/miopiik/），格式须与 live 一致
-# 供 persona-sync 逐字比对，不套 prettier（否则块标量重排版会破坏同步）。
-examples/miopiik/agent.cordis.yml
-packages/dsh-miopiik/preset/
 package-lock.json
+# 会话期工作区（记忆 / 检查点 / recon 调查产物），已在 .gitignore 里
+.dsh/

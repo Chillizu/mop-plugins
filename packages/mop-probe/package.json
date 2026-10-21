@@ -1,0 +1,55 @@
+{
+  "name": "mop-probe",
+  "description": "MiOpIIk deployment probe: reports runtime/deployment facts and audits every visible tool schema against the function-calling contract the upstream API enforces (object-root parameters, no null type). Born from an incident where one malformed third-party tool schema failed every turn of a session.",
+  "version": "0.1.1",
+  "type": "module",
+  "license": "MIT",
+  "main": "index.js",
+  "engines": {
+    "node": ">=22.15"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "cordis",
+    "probe",
+    "diagnostics",
+    "json-schema",
+    "miopiik"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Chillizu/mop-plugins.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Chillizu/mop-plugins/issues"
+  },
+  "homepage": "https://github.com/Chillizu/mop-plugins/tree/main/packages/mop-probe#readme",
+  "files": [
+    "README.md",
+    "index.js",
+    "probe.js",
+    "cordis.patch.yml"
+  ],
+  "exports": {
+    ".": "./index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": "0.2.1-rc.2"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-tools": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh-tools": "0.2.1-rc.2"
+  }
+}

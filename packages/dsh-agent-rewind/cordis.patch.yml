@@ -1,0 +1,4 @@
+# Native DSH bundle; no extra runtime or preset overrides.
+- insert:
+    - id: dsh-agent-rewind
+      name: 'dsh-agent-rewind'

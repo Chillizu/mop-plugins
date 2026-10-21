@@ -22,12 +22,7 @@ jobs:
         run: npm run lint
       - name: Format check
         run: npm run format:check
-      - name: Docs crossrefs
-        run: bash tools/verify-crossrefs.sh
       - name: Test
         run: npm test
-      # NOTE (P1-6): `npm test` uses real @deepseek-ai/schemastery (npm devDep),
-      # so Config-contract regressions are caught here. The full real-boot checks
-      # (npm run test:composition) need a built harness checkout and run in the
-      # separate .github/workflows/composition.yml (manual + weekly), not this
-      # push gate; see test/composition/README.md "CI coverage boundary".
+      - name: Session contract
+        run: npm run test:contract

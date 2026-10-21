@@ -1,0 +1,7 @@
+# Native DSH bundle; no extra runtime or preset overrides.
+- insert:
+    - id: dsh-session-policy
+      name: dsh-session-policy
+
+    - id: dsh-agent-rewind
+      name: 'dsh-agent-rewind'

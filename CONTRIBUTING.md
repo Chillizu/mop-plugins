@@ -1,41 +1,37 @@
-# Contributing
+# Contributing / releases
 
-直接、简洁、无 Emoji、证据优先——文档与提交信息同样遵循。
+This repository is in maintenance mode. Prefer DSH native APIs and delete an extension when upstream exposes equivalent model-facing behavior. Do not add compatibility layers for obsolete DSH builds.
 
-## 开发环境
+## Supported runtime
 
-- Node >= 22.15（`engines` 约束）。
-- `npm install --include=dev` 安装 eslint、prettier 和真实 schemastery。
+- Node >= 22.15.
+- DSH **0.2.1-rc.2**. Published DSH peer versions match this prerelease exactly to avoid silent mismatches across incompatible RCs.
+- `dsh-session-policy` and `dsh-agent-rewind` share a lockstep release number. `mop-probe` has a separate version line.
 
-## 门禁
+## Gates
 
-| 命令                             | 作用                                                                                         |
-| -------------------------------- | -------------------------------------------------------------------------------------------- |
-| `npm run check`                  | 插件源码语法检查                                                                             |
-| `npm run lint`                   | ESLint                                                                                       |
-| `npm run format:check`           | Prettier；preset YAML 的源与打包副本保留逐字一致                                             |
-| `bash tools/verify-crossrefs.sh` | 文档相对链接检查                                                                             |
-| `npm test`                       | 单测；通过 `test/register-mocks.mjs` stub DSH workspace 模块                                 |
-| `npm run test:composition`       | 可选真实 Loader 集成检查；需要 DSH 0.2.0-rc.2 源码 checkout，见 `test/composition/README.md` |
+```bash
+npm ci
+npm run check
+npm run lint
+npm run format:check
+npm test
+npm run test:contract
+npm run test:composition
+```
 
-## 代码约定
+Tests must cover **real** Harness Loader and ToolRuntime, not just mocks. Do not reintroduce the old independent subagent-spawn fixture: it tested upstream transport internals unrelated to our retained packages, and broke when DSH 0.2.1 changed its required Services. The retained bundles' real Loader and JSON Schema contracts remain covered.
 
-- DSH 已有的子代理、模型设置、会话查询、技能目录/加载能力由 DSH 原生实现承担；不要重新添加平行工具。
-- MiOpIIk 保留工作流 persona、恢复、规则注入、诊断和明确的技能创作能力。
-- 文件写路径一律走 CAS（`replaceIfVersion` / `createIfAbsent`），不盲覆盖。
-- 插件副作用归属当前 fiber（`ctx.effect` / 返回 disposer），stop/update 可回收。
-- preset persona 源与运行副本由 `test/persona-sync.test.js` 核对；示例与 npm preset 逐字一致由 `test/dsh-miopiik.test.js` 核对。
+## Publish
 
-## 版本与发布
+1. Bump `dsh-agent-rewind` and `dsh-session-policy` together; update their dependency range. Bump `mop-probe` separately when its package changes. Update the root manifest, lockfile, changelog and READMEs.
+2. Run every gate. Inspect `npm pack --dry-run --workspace <package>` for each artifact; verify license and `cordis.patch.yml` are included.
+3. Commit, merge the release branch into `main` and push. Tag releases distinctly: `v<policy-version>` for the policy pair and `mop-probe-v<probe-version>` for the probe.
+4. Publish policy pair **in order**: `dsh-agent-rewind` first, then `dsh-session-policy`; publish `mop-probe` separately.
+5. Verify npm registry `dist-tags` and install exact versions in a clean directory. Registry propagation can lag even after an apparently successful publish.
 
-同一 release train 的 8 个保留公开包（7 个插件/兼容包 + `dsh-miopiik` 套件）使用 lockstep 版本：
+### Local npm publishing gotchas
 
-1. 所有公开 workspace 同步更新版本号和内部依赖范围，再刷新 `package-lock.json`。
-2. 更新 `CHANGELOG.md`、README 和迁移说明。
-3. 运行 `npm run check`、`npm run lint`、`npm run format:check`、`bash tools/verify-crossrefs.sh`、`npm test`；有 DSH checkout 时另跑真实组合测试。
-4. 对每个 workspace 运行 `npm pack --dry-run`，核对文件清单。
-5. 提交变更，建立对应 `v<x.y.z>` Git tag 并推送。
-6. `npm publish --workspaces --access public` 发布 lockstep workspace；依赖包在 suite 之前发布。
-7. 若移除已发布包的功能，保留 npm 历史 tarball，并用 `npm deprecate` 指向替代能力和迁移版本。不要 unpublish 历史版本。
+The previous release found this machine's default npm cache could cause a publish to exit successfully without actually sending the request. Use a **writable** cache, e.g. `NPM_CONFIG_CACHE=/tmp/npmcache-mop-<release>` and verify `npm whoami` before publishing. Do not interpret an immediate registry 404 or placeholder `0.0.0-stage` as definitive failure; check the canonical registry with a cache-busting query and verify installation after propagation. A `409` may also mean a publish actually succeeded; inspect the registry before retrying. Avoid logging or committing npm authentication tokens.
 
-0.x 阶段允许通过 minor 版本发布破坏性迁移；发布包的版本号遵循 SemVer。
+Do not unpublish old packages; their tarballs preserve compatibility for old consumers. Historical design documents are recoverable from Git history.

@@ -1,0 +1,4 @@
+# Native DSH bundle; no extra runtime or preset overrides.
+- insert:
+    - id: mop-probe
+      name: 'mop-probe'

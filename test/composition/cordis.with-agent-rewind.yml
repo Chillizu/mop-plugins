@@ -1,0 +1,60 @@
+# Retained MiOpIIk packages on the real DSH loader.
+#
+# 两个保留行：dsh-session-policy（规则 + 诊断）与 dsh-agent-rewind（命名恢复账本）。
+# 账本包不 import 策略包（依赖只是版本 lockstep + 同 patch 挂载），因此必须各自挂行，
+# 否则 agent_checkpoint / agent_rewind / agent_checkpoint_list 不会注册。
+# 服务行补齐两个包的 inject 联合：tools / fs / sandboxPolicy / sessions /
+# sessionPersistence，另挂 systemPrompt（session_rule 的会话级 section 源）、
+# session-projection + token-meter（session_doctor mode="stats" 的投影源）与
+# session-query-sqlite（冷会话读取），使夹具的挂载面与真实 profile 一致。
+- id: session
+  name: '@deepseek-ai/dsh-session'
+
+- id: agent
+  name: '@deepseek-ai/dsh-agent'
+
+- id: system-prompt
+  name: '@deepseek-ai/dsh-system-prompt'
+  config:
+    persona: ''
+
+- id: tools
+  name: '@deepseek-ai/dsh-tools'
+
+- id: session-projection
+  name: '@deepseek-ai/dsh-session-projection'
+
+- id: token-meter
+  name: '@deepseek-ai/dsh-token-meter'
+
+- id: sandbox
+  name: '@deepseek-ai/dsh-sandbox-local'
+
+- id: sandbox-policy
+  name: '@deepseek-ai/dsh-sandbox-policy'
+  config:
+    mode: workspace-write
+    workspaceRoot: '/tmp/mop-composition-workspace'
+
+- id: fs-sandbox
+  name: '@deepseek-ai/dsh-fs-sandbox'
+
+- id: fs-observation-policy
+  name: '@deepseek-ai/dsh-fs-observation-policy'
+
+- id: session-persistence-jsonl
+  name: '@deepseek-ai/dsh-session-persistence-jsonl'
+  config:
+    root: '/tmp/mop-composition-sessions'
+
+- id: session-query-sqlite
+  name: '@deepseek-ai/dsh-session-query-sqlite'
+  config:
+    path: ':memory:'
+    openAt: never
+
+- id: dsh-agent-rewind
+  name: 'dsh-agent-rewind'
+
+- id: dsh-session-policy
+  name: 'dsh-session-policy'

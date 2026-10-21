@@ -28,7 +28,7 @@ body:
     id: capabilities
     attributes:
       label: capabilities 清单输出
-      description: 会话内运行 mop_probe_capabilities 后，粘贴 .dsh/memory/capabilities.md 全文。
+      description: 会话内运行 agent_probe_capabilities 后，粘贴 .dsh/memory/capabilities.md 全文。
       render: markdown
   - type: input
     id: env

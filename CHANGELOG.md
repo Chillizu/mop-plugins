@@ -1,9 +1,165 @@
 # Changelog
 
 所有对外可见的变更记录在本文件。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
-版本号遵循 SemVer；同一 release train 中实际发布的 `dsh-miopiik-*` 包 + 套件包 `dsh-miopiik` 采用 **lockstep 版本**（同号同发）。
+版本号遵循 SemVer；同一 release train 中实际发布的包采用 **lockstep 版本**（同号同发）。
 
 ## [Unreleased]
+
+## [0.5.2] - 2026-10-21 (DSH 0.2.1 compatibility and maintenance-mode cleanup)
+
+- `dsh-agent-rewind` and `dsh-session-policy`: align runtime peer dependencies and real composition tests with DSH `0.2.1-rc.2`. Keep named rewind, session-scoped rules, and diagnostic tools unchanged.
+- `mop-probe` separately advances to `0.1.1` with the matching DSH peer contract; the read-only schema auditing tool is unchanged.
+- Remove historical design/experiment documents from the **current tree** (retained in Git history), superseded CLI lab and DSH 0.2.0 spawn-fixture tests. Real Loader coverage now tests only maintained functionality.
+- Simplify the three Cordis bundle patches, READMEs and CI; no legacy compatibility aliases or obsolete orchestration framework.
+- The live profile's existing state, sessions, and local untracked archive are out of scope for this repository cleanup.
+
+## [0.1.0] - 2026-10-13
+
+**本仓库第一个独立发布的包**：`mop-probe` 走自己的版本线（`0.1.x`），不随
+`dsh-session-policy` / `dsh-agent-rewind` 的 0.5.x lockstep 列车；后两者本次**无代码
+变更**，故不发版。
+
+### Added
+
+- **`mop-probe@0.1.0`：部署探针。** 一个模型可见工具 `mop_probe_env`：
+  `mode="env"` 报运行时/部署/会话/模型事实，`mode="tools"` 审计每个可见工具的
+  JSON Schema 是否满足上游函数调用契约。
+
+  起因是一次真实事故：某个挂在 agent preset 里的第三方探针以 `mop_probe_env` 注册了
+  **空 schema**，deepseek API 直接拒收整个请求 ——
+  `Invalid schema for function 'mop_probe_env': schema must be a JSON Schema of
+'type: "object"', got 'type: null'` —— 该会话此后**每一轮都失败**，与轮次内容无关。
+  DSH 的 `tools.register()` 原样路径不做 object-root 校验，所以这道判据只能由插件侧守。
+
+  本包给出三层防线：注册形态唯一（一律 `defineTool()`，`test/mop-probe.test.js` 扫源码
+  禁止绕过）、判据双向可用（扁平参数图与投影 schema 同判，CI 与运行时共用一份）、
+  只读自检（读 `tools.schemas()`，发现违规**如实报告而不抛错**）。`test/composition/`
+  新增真实 Loader 挂载 + 真实投影面实跑审计的验证。
+
+  发布状态：**已公开发布**。`registry.npmjs.org` 上 `dist-tags.latest = 0.1.0`，
+  全新目录 `npm install mop-probe@0.1.0` 实装成功（5 个文件、MIT、`dsh.bundle.patch` 在包内）。
+  注意本包只声明 `@deepseek-ai/dsh-tools` 为 optional peer——它是 DSH 发行版自带的包、不在 npm，
+  所以独立目录里直接 `import 'mop-probe'` 会报该 peer 缺失，这是预期形态，不是包缺陷。
+
+  发布中的一次误判记在 `CONTRIBUTING.md`「npm 陷阱」第 3 条：发布后两三分钟内 registry 只显示
+  `0.0.0-stage` 占位且公开安装 404，那是**传播延迟**，不是 2FA 卡住。
+
+  发布前实测：web profile 真实工具面 **42 个工具全部通过契约校验**（object-root、
+  无 null 类型、`required ⊆ properties`）。
+
+  > 与已删除的第三方 `mop-probe` **不是同一份实现**：那是 `/tmp/mop-probe` 软链进 web
+  > profile 的临时包；本包在工作区内重建并带契约门禁。
+
+### Packaging
+
+- `test/mop-probe.test.js` 的 schema 契约门禁并入 `npm test`：反例锚定线上那条
+  `type: null`，正向覆盖全部 workspace 包的实际注册结果。
+- `test/composition/cordis.with-mop-probe.yml`：探针的真实装载夹具（`tools` 行经
+  `systemPrompt` 传递依赖才会 activate —— 少一行探针会一直 pending）。
+- `README.md` / `packages/mop-probe/README.md`：套件从「两个包」更新为「三个包」，
+  并写明 `mop_*` 前缀自 0.5.0 起**只**用于诊断探针这一个工具。
+- `npm run check` 覆盖 `packages/mop-probe/` 的两个入口。
+
+## [0.5.1] - 2026-10-13
+
+### Fixed
+
+- **`agent_checkpoint` 在真实部署里 100% 失败。** DSH 的 `Session` **没有** 公开的 `.events`
+  属性——事件只能经 `snapshotEvents()` 取得。旧实现读 `agent.session.events`，于是拿到
+  `undefined`，被自身校验误判成「会话不可用」并报
+  `agent_checkpoint: event stream of session <id> unavailable`，检查点永远写不下去。
+  现经 `liveSessionEvents()` 统一取内存快照，并保留对更早 `Session` 形态 `.events`
+  的兼容回落。
+
+  为什么选已弃用的同步 `snapshotEvents()` 而不是 async 的 `sessionQuery.readSession`：
+  持久化后端是**异步缓冲**的，durable log 可能落后于内存；而检查点要的是「**此刻**
+  最后一个 `turn/end`」，慢一拍就会把边界记小、回溯到错的位置。live 会话优先取内存
+  快照，durable 读只作为会话不再 live 时的回落。
+
+- **测试替身比现实更宽松，掩盖了上面这个缺陷。** `test/harness-mocks.mjs` 的 `rootAgent()`
+  曾返回 `{ id, header, events }`，凭空造出一个真实 `Session` 没有的 `.events`，
+  让「读 live 会话事件流」的代码路径一路绿灯。现替身只提供真实 API
+  （`snapshotEvents()` 有、`.events` 没有），并新增 `test/session-contract.mjs`：
+  在**无 stub 的独立进程**里对真实 `Session` 类实测断言该契约（快照存在、`.events` 缺位、
+  插件能从替身读出事件并定位边界），以 `npm run test:contract` 纳入门禁。
+
+- 新增回归锚 `agent_checkpoint reads a live session only through snapshotEvents()`：
+  先断言替身不得暴露 `.events`，再验证边界确实来自 `snapshotEvents()` 读到的事件流。
+
+### Removed
+
+- 清掉两个中途引入、实际无人使用的 devDependency（`@deepseek-ai/dsh-llm`、`zod`）。
+
+## [0.5.0] - 2026-10-13
+
+**破坏性重定位：原生优先（native-first）。** 本版删除绝大多数功能并重新切分包边界，理由是 DSH `0.2.0-rc.2` 已经原生提供它们。判据与取证见 [docs/design/0.5-repositioning.md](docs/design/0.5-repositioning.md)。
+
+### 判定依据（逐条取证，非印象）
+
+对已安装 DSH `0.2.0-rc.2` 的 `README.md` / `lib/types/*.d.ts` / 源码逐项核对，并用活运行时 `cordis_inspect_query(host, Tool, listTools)` 取「模型可见工具全集」作第一手判据：
+
+- 原生模型可见工具里**没有**任何 fork / checkpoint / rewind / rule / token / probe 类工具 → 这几类是真实空档。
+- `ctx.sessions.fork` 与宿主 Remote `session.fork({sessionId, atSeq?})` 都存在，但三层（Service → Remote → Web GUI 按钮）**都对模型关闭** → 恢复账本不可替代。
+- `dsh-experimental-agent-team-profile`（用户 profile 已启用）提供命名成员、durable 消息、共享任务板，并显式 `disabled: true` 掉 `tool-subagent` / `tool-subagent-fork` → MiOpIIk 的「三层 + 监督层协作协议」整块定位已被取代。
+- `dsh-session-checkpoint-policy` 是**崩溃前落盘**语义，与命名检查点不是一回事（勿混同）。
+- `dsh-token-meter` 的 `tokenUsage` / `dsh-session-stats` 的 `sessionStats` 上游 README 明写 "registers nothing model-facing" / "None" → `session_doctor(stats)` 是唯一模型可见路径。
+- `dsh-system-prompt` README 明写 "there is no end-user prompt-editing API" → 会话级规则注入是**刻意关闭**的门。
+
+### Changed — 包边界重切（9 包 → 2 包）
+
+| 包                                            | 职责                                                  | 模型可见工具                                                  |
+| --------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------- |
+| `dsh-agent-rewind`（新，无 scope）            | 会话的命名恢复账本：共享 `.dsh/memory/checkpoints.md` | `agent_checkpoint` / `agent_rewind` / `agent_checkpoint_list` |
+| `dsh-session-policy`（由 `dsh-miopiik` 改名） | 会话级硬规则 + 诊断                                   | `session_rule` / `session_doctor`                             |
+
+- `dsh-session-policy` 声明 `dependencies: { "dsh-agent-rewind": "^0.5.0" }`，一条 `add dsh-session-policy` 两包一起装。
+- 两个包均 `version 0.5.0`，lockstep。
+
+### Changed — 命名统一（消灭 `mop_` 前缀）
+
+历史上包名用 `miopiik`、工具名用 `mop_` 前缀——**同一个词的两个缩写并存**，纯冗余。现统一：工具名前缀 = 所属包职责，与 DSH 官方先例同形（包 `dsh-tool-session-query` → 工具 `session_*`）。
+
+| 0.4.x                                                  | 0.5.0                                                   |
+| ------------------------------------------------------ | ------------------------------------------------------- |
+| `mop_checkpoint`                                       | `agent_checkpoint`                                      |
+| `mop_rewind`                                           | `agent_rewind`                                          |
+| `mop_checkpoint_list`                                  | `agent_checkpoint_list`                                 |
+| `mop_rule_inject` / `mop_rule_show` / `mop_rule_clear` | `session_rule(action:"inject"\|"show"\|"clear", text?)` |
+| `mop_probe_capabilities`                               | `session_doctor(mode:"seams")`                          |
+| `mop_run_stats(sessionId)`                             | `session_doctor(mode:"stats", sessionId)`               |
+
+包名**不用**无前缀的 `agent-rewind` / `agent-checkpoint`：npm 上均已被同类项目占用（`agent-rewind` 的描述即 "Flight recorder + undo button for AI agents"），按「不代替已存在的」原则避开。
+
+### Removed（8 个包，不做兼容 shim）
+
+- 删除 `dsh-miopiik-tool-recovery`、`dsh-miopiik-diagnostics`、`dsh-miopiik-learn`、`dsh-miopiik-magic-keywords`、`dsh-miopiik-capabilities`、`dsh-miopiik-checkpoint`、`dsh-miopiik-run-stats`、`dsh-miopiik-policy`。已发布版本保留在 npm，但不提供转发包；升级须先清理 profile 旧行。
+- 模型可见工具 11 → 5：删除 `mop_learn`（原生 `write` + `dsh-skill-filesystem` 已覆盖，写后下一模型步骤即入目录）、`mop_checkpoint_prune`（并入 `agent_checkpoint` 自动裁剪）、`mop_probe_capabilities` / `mop_run_stats`（并入 `session_doctor` 两个 mode）、`mop_rule_*` 三个（并入 `session_rule`）。
+- **`dsh-miopiik-policy` 整体删除**：它守的 `subagent_execute` 是 **preset 里的行**，不是插件能力。preset 配置归用户、本套件不再代管 → 守卫默认空转。按原生优先原则，「为不存在的行准备的守卫」就是重叠面。需要强制显式路由时用 DSH 原生 `modelSelectionSettings` + `allowedModels` 白名单。
+- **不再挂载 `@deepseek-ai/dsh-tool-session-query`**：DSH Agent Teams profile 已自带协作面。该包也不再列为 optional 依赖（声明却不挂载会产生幽灵依赖），需要时一行 `add` 自行加回。
+- **不再代管 agent preset**：DSH 0.2 起 preset 是 `@deepseek-ai/dsh-agent-preset` 的声明行，旧的 `$DSH_HOME/.agent-presets/<id>/` 目录已无人读取。删除 `preset/`、`examples/miopiik/` 与 `bin/dsh-miopiik-init.mjs`。
+
+### Fixed
+
+- **冷路径回溯产生未闭合子会话**：`agent_rewind` 的冷会话分支原来直接把 `events.slice(0, seq+1)` 当 seed 交给 `sessions.create`，而**热路径**走 `sessions.fork` → 内部用 `buildForkSeed` 补合成闭合事件。当边界落在 turn/step 中间时，冷路径 fork 出的子会话结构未闭合（缺 `session/end-seed` / `step/end` / `turn/end`，未匹配的 tool call 也没有结果）。现改用 DSH 公开的 `@deepseek-ai/dsh-session/fork` 的 `buildForkSeed`（与第一方 `dsh-api-session-controller` 同一导入路径），`inheritedEventCount` 只计继承前缀。两条成对回归锚：边界未闭合（补 3 条）与边界恰好闭合（只补 fork 切割标记）。
+- **检查点静默丢失**：旧 `appendCheckpoint` 在 `checkpoints.md` 不以换行结尾时会把新行粘在末行尾部，该行无法被解析、检查点静默失效。现补分隔换行。
+- **能力清单谎报在场**：`probe` 的 `presenceOnly` 以 `typeof fn === 'function'` 判定，而「成对原语」判据传的是预算好的布尔 → 被一律判成 false；且 `sessionQuery.filterSessions/filterEvents` 只检查前者。现改为接收**谓词**并要求两者都在。
+- `agent_checkpoint` 显式传空 `sessionId` 不再静默打到自己会话，改为报错；事件流不可读时报错而非当作 seq 0。
+- `agent_rewind` 归属校验改为前缀不敏感（冷会话也生效）；fork 目标取检查点记录的真实 session id。
+- `session_rule` 的 `show` / `clear` 也要求存在调用会话；`inject` 先 dispose 旧 section 再注册，注册失败时状态清干净。
+- `session_doctor(stats)` 全零桶时输出 `allZero: true` + `note`（提示应判 INCONCLUSIVE 而非 PASS）；`sessionProjections` 在场但缺 `snapshot()` 时给出可诊断错误而非原始 `TypeError`。
+- 测试基建三处真空通过：`import only declared modules` 未归一化子路径导入；`release-version` 的 `publicWorkspaceManifests()` 按 `^dsh-` 过滤会漏掉 scoped 包；两个既有测试均缺反向自检。
+
+### Kept（未变契约）
+
+- `checkpoints.md` 行格式 `- [ISO] label | session=<sid> | seq=<n> [| note]` 未变；历史检查点继续可读、可回溯。
+- `seq` 仍是 **inclusive** 边界；`inheritedEventCount` 只计继承前缀，`buildForkSeed` 的合成闭合事件在它之外。
+- 自动检查点阈值默认 200，只裁可被现行正则解析的行；注释/空行/旧格式/散文永不删除。
+
+### Validation
+
+- `npm run check`、`npx eslint packages test tools`、`npx prettier --check .`、`tools/verify-crossrefs.sh` 全绿。
+- `npm test` 覆盖两个包的 5 个工具、事件面、纯 helper 与真实 Loader 挂载。
+- `npm run test:composition` 经真实 DSH Cordis Loader 挂载两包并断言 5 个工具在场。
 
 ## [0.4.1] - 2026-10-13
 

@@ -1,59 +1,56 @@
-# mop-plugins
+# mop-plugins (MiOpIIk)
 
-MiOpIIk workflow and recovery extensions for DeepSeek Harness (DSH).
+Three small, **native-first** extensions for [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness). Targets DSH **0.2.1-rc.2**. DSH owns Agent Teams, subagents, search, skills, approvals, Worktrees, Ralph, and orchestration; this repository does not reimplement them.
 
-**定位：** MiOpIIk 提供自己的协作 persona、工作流约束、规则注入、检查点与恢复能力。子代理生命周期、会话级模型授权、会话检索、技能发现/加载、插件装配由 DSH 原生能力负责；MiOpIIk 只对执行层增加一条策略：`subagent_execute` 必须显式给出非空 `provider` 和 `model`，随后仍由 DSH 原生工具校验会话授权并运行子代理。
+## Packages
 
-## 兼容版本
+| Package                                                       | Version | Model-facing tools                                          | Why it exists                                                                                                                    |
+| ------------------------------------------------------------- | ------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| [`dsh-agent-rewind`](packages/dsh-agent-rewind/README.md)     | 0.5.2   | `agent_checkpoint`, `agent_rewind`, `agent_checkpoint_list` | Named, Agent-readable checkpoint ledger and Session fork at a recorded boundary; distinct from DSH crash recovery.               |
+| [`dsh-session-policy`](packages/dsh-session-policy/README.md) | 0.5.2   | `session_rule`, `session_doctor`                            | Reversible rules for the calling Session, plus runtime capability and token projection diagnostics. Installs `dsh-agent-rewind`. |
+| [`mop-probe`](packages/mop-probe/README.md)                   | 0.1.1   | `mop_probe_env`                                             | Optional read-only audit of the model-visible JSON Schema surface, including invalid object roots.                               |
 
-`0.4.1` 对齐 DSH `0.2.0-rc.2`。DSH 宿主在 `0.2.0-rc.2` 内置 `dsh-tool-subagent`，但**不内置** `dsh-tool-session-query`——该包发布在 npm、不随 harness 安装，缺它会让套件 patch 的会话查询行无法导入。因此套件把 `@deepseek-ai/dsh-tool-session-query` 保留为 `^0.2.0-rc.2` 的 npm dependency（与宿主同版本，不嵌套旧 `0.1.7` runtime）；子代理、模型授权、技能加载由宿主提供。MiOpIIk 插件只以 `^0.2.0-rc.2` peer contract 消费宿主的 `dsh-tools` / `dsh-llm`。
+The **six tools** are optional; no custom executor, model router, Agent Teams implementation, memory engine, or replacement of DSH built-ins is shipped. `mop-probe` is deliberately separate, so ordinary Sessions do not need diagnostic tools.
 
-官方能力依据：[DSH subagent tool](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/subagent/tool-subagent)、[session-query subsystem](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/session-query.md)、[DSH skills](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/skills.md)。
-
-## 安装
+## Install
 
 ```bash
-dsh plugin --profile <profile> add dsh-miopiik
-npx dsh-miopiik
+# Session policy + named checkpoint/rewind ledger (two packages, one command)
+dsh plugin --profile web add dsh-session-policy@0.5.2
+
+# Optional, independent deployment/schema probe
+dsh plugin --profile web add mop-probe@0.1.1
 ```
 
-安装后由 DSH 重载对应 profile。`dsh-miopiik` 套件会装配 MiOpIIk 的恢复、策略与诊断插件，并挂载官方会话查询工具 `@deepseek-ai/dsh-tool-session-query`（随套件依赖一并安装）；子代理及其模型设置由 DSH 宿主原生提供。preset 模板位于 `examples/miopiik/`。
+After changing a running profile, restart the DSH process that owns it (for example, `systemctl --user restart dsh-web.service` if installed as a user service).
 
-从 `0.2.x` 升级时，先检查 profile 插件清单并移除旧的 `dsh-miopiik-executor`、`dsh-miopiik-model-auth`、`dsh-miopiik-recall` 行，再安装新版套件。此前发布的 npm 版本保留并标记为已被 DSH 原生能力取代；不能通过 npm 删除已发布版本。
+Both policy and rewind can also be installed independently. Their `dsh.bundle.patch` entries contribute only the two required host plugins; they do not modify DSH presets or permissions. `mop-probe` contributes one row.
 
-## 工具与能力
+## Scope and guarantees
 
-| 来源           | 工具/能力                                                                                                                           | 归属                                                                      |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| DSH 原生       | `subagent`、`subagent_fork`、`subagent_plan`、`subagent_supervise`、`subagent_execute`                                              | 通用派发、模型选择与子代理生命周期                                        |
-| DSH 原生       | `session_search`、`session_event_search`、`session_trace`、`session_event_trace`、`session_event_read`                              | 历史会话检索与读取                                                        |
-| DSH 原生       | skill filesystem 自动生成的可用技能目录，以及 `skill` 加载工具                                                                      | 技能目录、发现和加载                                                      |
-| MiOpIIk        | 执行策略守卫                                                                                                                        | `subagent_execute` 要求显式 `provider` + `model`；授权由 DSH 原生设置检查 |
-| MiOpIIk        | `mop_checkpoint`、`mop_checkpoint_list`、`mop_checkpoint_prune`、`mop_rewind`、`mop_rule_inject`、`mop_rule_show`、`mop_rule_clear` | 检查点、恢复与会话规则                                                    |
-| MiOpIIk        | `mop_probe_capabilities`、`mop_run_stats`                                                                                           | DSH seam 诊断与 token 用量投影                                            |
-| MiOpIIk opt-in | `mop_learn`                                                                                                                         | 将可复用流程写为项目 skill；目录浏览和加载交给 DSH                        |
+- **Named rewind** uses DSH's Session Fork primitives; fork creates a **new Session**, and it does not restore working-tree files. Auto-checkpointing writes concise turn/error records to `.dsh/memory/checkpoints.md`, with bounded pruning.
+- **Session rules** are scoped to the calling Session and can be injected, viewed or cleared through `session_rule`. They are not a substitute for DSH host permissions.
+- **Diagnostics** use DSH Services and token usage projections; a missing token projection is an unknown result, not zero consumption.
+- **Tool audit** examines the exposed JSON Schema and reports violations without blocking the agent. It is not a guarantee that arbitrary tools are safe to execute.
 
-子代理名称采用 DSH 的 `subagent_*` 系列，不额外加项目统一前缀。执行层每次必须显式提供 `provider` 和 `model`；候选路由与授权名单来自 DSH 原生模型设置。
+If upstream exposes an equivalent model-facing function, retire ours rather than add another compatibility layer.
 
-## 保留的包
-
-- `dsh-miopiik`：聚合安装入口与 preset 初始化命令。
-- `dsh-miopiik-tool-recovery`：MiOpIIk 专属 checkpoint、rewind、prune 和规则注入。
-- `dsh-miopiik-policy`：仅要求 `subagent_execute` 明确提供路由；调用授权、执行与生命周期交给 DSH。
-- `dsh-miopiik-diagnostics`：DSH 能力兼容探测和 token 投影读取。
-- `dsh-miopiik-learn`：只保留 `mop_learn` 技能创作工具。
-- `dsh-miopiik-magic-keywords`：可选的提示词关键词 notice 插件。
-- `dsh-miopiik-capabilities`、`dsh-miopiik-run-stats`、`dsh-miopiik-checkpoint`：既有包名兼容入口；默认套件不装载这些行。
-
-## 发布与开发
-
-该仓库使用 npm workspaces，所有保留的公开包按同一版本发布。运行现有检查：
+## Test
 
 ```bash
+npm ci
 npm run check
 npm run lint
 npm run format:check
 npm test
+npm run test:contract
+npm run test:composition
 ```
 
-发布记录见 [CHANGELOG.md](CHANGELOG.md)。历史实验与迁移设计保留在 `docs/`，仅作为对应时期的记录，不代表当前运行时契约。
+Composition tests use the **real** Cordis Loader from an installed DSH distribution or a built DSH checkout; see [`test/composition/README.md`](test/composition/README.md). Publishing guidance is in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+## History and maintenance
+
+MiOpIIk originally experimented with a multi-layer Agent architecture, but DSH 0.2.x absorbed almost all of it. This repository is now in **maintenance mode**: bug fixes and compatibility checks only. Older design trees, experiment plans, and superseded compatibility notes were removed from the current checkout to avoid being mistaken for runtime documentation; they remain available in Git history (see commit history through 2026-10-13). The local `.local/miopiik-archive/` is intentionally ignored and was not touched by this cleanup.
+
+[Changelog](CHANGELOG.md) · [MIT License](LICENSE)
